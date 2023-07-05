@@ -1,4 +1,4 @@
-import { assign, createMachine, fromPromise } from 'xstate';
+import { assign, createMachine, fromPromise, sendTo } from 'xstate';
 import { RESOURCES, Resource } from '../data/resources.js';
 
 async function fetchResources(): Promise<Array<Resource>> {
@@ -14,15 +14,15 @@ async function fetchResources(): Promise<Array<Resource>> {
 }
 
 export const fetchInitialDataMachine = createMachine({
-	id: 'fetchInitialDataMachine',
+	id: 'fetchMachine',
 	initial: 'idle',
 	context: {
 		data: null,
 	},
 	states: {
 		idle: {
-			on: {
-				FETCH: 'loading',
+			always: {
+				target: 'loading',
 			},
 		},
 		loading: {
@@ -30,9 +30,18 @@ export const fetchInitialDataMachine = createMachine({
 				src: fromPromise(() => fetchResources()),
 				onDone: {
 					target: 'success',
-					actions: assign({
-						data: ({ event }) => event.output,
-					}),
+					actions: [
+						assign({
+							data: ({ event }) => event.output, // daten zum parent wohl nur über send event zum parent mit data
+						}),
+						({ event }) => console.log('promise done', event.output),
+						sendTo(
+							({ system }) => system.get('Notbetrieb Root'),
+							({ event }) => {
+								return { type: 'FETCH-SUCCESS', data: event.output };
+							}
+						),
+					],
 				},
 				onError: 'failure',
 			},
@@ -42,9 +51,6 @@ export const fetchInitialDataMachine = createMachine({
 		failure: {
 			after: {
 				1000: 'loading',
-			},
-			on: {
-				RETRY: 'loading',
 			},
 		},
 	},
