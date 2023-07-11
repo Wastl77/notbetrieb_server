@@ -4,7 +4,7 @@ import { RESOURCES, Resource } from '../data/resources.js';
 async function fetchResources(): Promise<Array<Resource>> {
 	return new Promise((resolve, reject) => {
 		setTimeout(() => {
-			if (Math.random() < 0.5) {
+			if (Math.random() < 0.999999999) {
 				reject();
 				return;
 			}
@@ -14,11 +14,15 @@ async function fetchResources(): Promise<Array<Resource>> {
 }
 
 export const fetchInitialDataMachine = createMachine({
+	// types: {} as {
+	// 	context: { count: number };
+	// 	events: { type: 'FETCH-SUCCESS' };
+	// },
 	id: 'fetchMachine',
-	initial: 'idle',
 	context: {
-		data: null,
+		count: 0,
 	},
+	initial: 'idle',
 	states: {
 		idle: {
 			always: {
@@ -26,15 +30,12 @@ export const fetchInitialDataMachine = createMachine({
 			},
 		},
 		loading: {
+			entry: [],
 			invoke: {
 				src: fromPromise(() => fetchResources()),
 				onDone: {
 					target: 'success',
 					actions: [
-						assign({
-							data: ({ event }) => event.output, // daten zum parent wohl nur über send event zum parent mit data
-						}),
-						({ event }) => console.log('promise done', event.output),
 						sendTo(
 							({ system }) => system.get('Notbetrieb Root'),
 							({ event }) => {
@@ -43,12 +44,32 @@ export const fetchInitialDataMachine = createMachine({
 						),
 					],
 				},
-				onError: 'failure',
+				onError: [
+					{
+						guard: ({ context }) => context.count > 4,
+						target: 'failed',
+					},
+					{ target: 'failure' },
+				],
 			},
 		},
+		failed: {
+			entry: [
+				sendTo(
+					({ system }) => system.get('Notbetrieb Root'),
+					() => {
+						return { type: 'FETCH-ERROR' };
+					}
+				),
+			],
+			type: 'final',
+		},
 		success: { type: 'final' },
-		//TODO: Add counter and after 5 retries transition to error state in root machine
 		failure: {
+			entry: [
+				assign({ count: ({ context }) => context.count + 1 }),
+				({ context }) => console.log('count erhöht auf', context.count),
+			],
 			after: {
 				1000: 'loading',
 			},

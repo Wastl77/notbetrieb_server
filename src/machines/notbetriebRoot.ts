@@ -25,8 +25,12 @@ export const notbetriebRootMachine = createMachine({
 					actions: ({ event }) =>
 						console.log('fetch success event', event.data),
 				},
+				'FETCH-ERROR': {
+					target: 'fetchError',
+				},
 			},
 		},
+		fetchError: { entry: [() => console.log('Fetch errored')], type: 'final' },
 		'spawn resources': {
 			entry: [
 				({ event }) => {
