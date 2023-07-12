@@ -4,7 +4,7 @@ import { RESOURCES, Resource } from '../data/resources.js';
 async function fetchResources(): Promise<Array<Resource>> {
 	return new Promise((resolve, reject) => {
 		setTimeout(() => {
-			if (Math.random() < 0.999999999) {
+			if (Math.random() < 0.5) {
 				reject();
 				return;
 			}
@@ -30,7 +30,6 @@ export const fetchInitialDataMachine = createMachine({
 			},
 		},
 		loading: {
-			entry: [],
 			invoke: {
 				src: fromPromise(() => fetchResources()),
 				onDone: {
@@ -46,7 +45,7 @@ export const fetchInitialDataMachine = createMachine({
 				},
 				onError: [
 					{
-						guard: ({ context }) => context.count > 4,
+						guard: ({ context }) => context.count > 4, // TODO: inline guards serialisieren als string
 						target: 'failed',
 					},
 					{ target: 'failure' },

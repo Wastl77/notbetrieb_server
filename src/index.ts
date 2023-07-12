@@ -7,13 +7,15 @@ const app = express();
 
 app.use('/resource', routes.resource);
 
-const rootActor = interpret(notbetriebRootMachine, {
+export const rootActor = interpret(notbetriebRootMachine, {
 	systemId: 'Notbetrieb Root',
 });
 
 rootActor.subscribe((state) => {
 	console.log('Value Root:', state.value);
-	console.log('Context Root:', state.context);
+	if (state.context.ref !== undefined) {
+		console.log('Child State', state.context.ref[0]._state.value);
+	}
 });
 rootActor.start();
 
