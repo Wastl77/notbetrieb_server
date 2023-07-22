@@ -20,6 +20,11 @@ rootActor.subscribe((state) => {
 });
 rootActor.start();
 
+setTimeout(() => {
+	const persistedState = rootActor.getPersistedState();
+	console.log(persistedState?.children['x:4'].state);
+}, 7000);
+
 app.listen(8000, () => {
 	console.log('listening on port 8000');
 });
