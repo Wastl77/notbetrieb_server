@@ -1,23 +1,15 @@
 import { assign, createMachine, fromPromise, sendTo } from 'xstate';
-import { RESOURCES, Resource } from '../data/resources.js';
+import prisma from '../db/prismaClient.js';
+import { Prisma } from '@prisma/client';
 
-async function fetchResources(): Promise<Array<Resource>> {
-	return new Promise((resolve, reject) => {
-		setTimeout(() => {
-			if (Math.random() < 0.5) {
-				reject();
-				return;
-			}
-			resolve(RESOURCES);
-		}, 1000);
-	});
+async function fetchResources() {
+	return await prisma.resource.findMany();
 }
 
 export const fetchInitialDataMachine = createMachine({
-	// types: {} as {
-	// 	context: { count: number };
-	// 	events: { type: 'FETCH-SUCCESS' };
-	// },
+	types: {} as {
+		context: { count: number };
+	},
 	id: 'fetchMachine',
 	context: {
 		count: 0,
@@ -38,7 +30,10 @@ export const fetchInitialDataMachine = createMachine({
 						sendTo(
 							({ system }) => system.get('Notbetrieb Root'),
 							({ event }) => {
-								return { type: 'FETCH-SUCCESS', data: event.output };
+								return {
+									type: 'FETCH-SUCCESS',
+									data: event.output as Prisma.ResourceCreateInput[],
+								};
 							}
 						),
 					],

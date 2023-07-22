@@ -6,7 +6,13 @@ const router = Router();
 router.post('/', (req, res) => {
 	const { callsign, event } = req.query;
 	console.log(`Callsign: ${callsign}, Event: ${event}`);
-	rootActor.send({ type: 'RESOURCE-EVENT', callsign, eventType: event });
+	if (typeof callsign === 'string' && typeof event === 'string') {
+		rootActor.send({
+			type: 'RESOURCE-EVENT',
+			callsign,
+			eventType: event,
+		});
+	}
 	res.send('Ok');
 });
 

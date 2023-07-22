@@ -1,6 +1,9 @@
 import { createMachine } from 'xstate';
 
 export const resource = createMachine({
+	types: {} as {
+		events: { type: 'SET-STATUS-1' };
+	},
 	id: 'resource',
 	context: {},
 	initial: 'available State',
