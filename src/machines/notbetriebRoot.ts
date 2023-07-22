@@ -9,8 +9,9 @@ export const notbetriebRootMachine = createMachine(
 		types: {} as {
 			events:
 				| { type: 'FETCH-SUCCESS'; data: Prisma.ResourceCreateInput[] }
-				| { type: 'FETCH-ERROR' }
-				| { type: 'RESOURCE-EVENT'; callsign: string; eventType: string };
+				| { type: 'INITIALIZATION-ERROR' }
+				| { type: 'RESOURCE-EVENT'; callsign: string; eventType: string }
+				| { type: 'SESSION-DB-CREATED' };
 		},
 		id: 'Notbetrieb Root',
 		initial: 'initialState',
@@ -22,7 +23,6 @@ export const notbetriebRootMachine = createMachine(
 				},
 				on: {
 					'FETCH-SUCCESS': {
-						target: 'ready',
 						actions: [
 							// { type: 'logEvent', params: { message: 'fetch success' } },
 							() => console.log('fetch success'),
@@ -36,19 +36,22 @@ export const notbetriebRootMachine = createMachine(
 							}),
 						],
 					},
-					'FETCH-ERROR': {
-						target: 'fetchError',
+					'SESSION-DB-CREATED': {
+						target: 'ready',
+					},
+					'INITIALIZATION-ERROR': {
+						target: 'initializationError',
 					},
 				},
 			},
-			fetchError: {
-				entry: [() => console.log('Fetch errored')],
+			initializationError: {
+				entry: [() => console.log('Initialization errored')],
 				type: 'final',
 			},
 			ready: {
 				entry: [
 					() => {
-						console.log('spawn State');
+						console.log('App ready');
 					},
 				],
 				on: {

@@ -1,9 +1,28 @@
-import { assign, createMachine, fromPromise, sendTo } from 'xstate';
+import {
+	AnyEventObject,
+	assign,
+	createMachine,
+	fromPromise,
+	sendTo,
+} from 'xstate';
+import { Prisma, PrismaClient } from '@prisma/client';
 import prisma from '../db/prismaClient.js';
-import { Prisma } from '@prisma/client';
+
+const prismaInitialDb = new PrismaClient({
+	datasources: {
+		db: {
+			url: `${process.env.DATABASE_URL}/notbetrieb_initial?directConnection=true`,
+		},
+	},
+});
 
 async function fetchResources() {
-	return await prisma.resource.findMany();
+	return await prismaInitialDb.resource.findMany();
+}
+
+async function createSessionDb(input: Prisma.ResourceCreateManyInput[]) {
+	console.log('create Db:', input[0]);
+	return await prisma.resource.createMany({ data: input });
 }
 
 export const fetchInitialDataMachine = createMachine({
@@ -18,14 +37,14 @@ export const fetchInitialDataMachine = createMachine({
 	states: {
 		idle: {
 			always: {
-				target: 'loading',
+				target: 'fetching',
 			},
 		},
-		loading: {
+		fetching: {
 			invoke: {
 				src: fromPromise(() => fetchResources()),
 				onDone: {
-					target: 'success',
+					target: 'create_session_db',
 					actions: [
 						sendTo(
 							({ system }) => system.get('Notbetrieb Root'),
@@ -42,6 +61,11 @@ export const fetchInitialDataMachine = createMachine({
 					{
 						guard: ({ context }) => context.count > 4, // TODO: inline guards serialisieren als string
 						target: 'failed',
+						actions: [
+							(event) => {
+								console.log(event);
+							},
+						],
 					},
 					{ target: 'failure' },
 				],
@@ -52,21 +76,45 @@ export const fetchInitialDataMachine = createMachine({
 				sendTo(
 					({ system }) => system.get('Notbetrieb Root'),
 					() => {
-						return { type: 'FETCH-ERROR' };
+						return { type: 'INITIALIZATION-ERROR' };
 					}
 				),
 			],
 			type: 'final',
 		},
-		success: { type: 'final' },
+		create_session_db: {
+			entry: [() => console.log('resources fetched entered')],
+			invoke: {
+				src: fromPromise(({ input }) => createSessionDb(input.resources)),
+				input: ({ event }: AnyEventObject) => ({ resources: event.output }),
+				onDone: {
+					actions: [
+						() => console.log('create db done'),
+						sendTo(({ system }) => system.get('Notbetrieb Root'), {
+							type: 'SESSION-DB-CREATED',
+						}),
+					],
+					target: 'success',
+				},
+				onError: {
+					actions: [
+						(event) => {
+							console.log(event);
+						},
+					],
+					target: 'failed',
+				},
+			},
+		},
 		failure: {
 			entry: [
 				assign({ count: ({ context }) => context.count + 1 }),
 				({ context }) => console.log('count erhöht auf', context.count),
 			],
 			after: {
-				1000: 'loading',
+				1000: 'fetching',
 			},
 		},
+		success: { type: 'final' },
 	},
 });
