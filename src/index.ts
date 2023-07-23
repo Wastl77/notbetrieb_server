@@ -3,6 +3,7 @@ import express from 'express';
 import routes from './routes/index.js';
 import { interpret } from 'xstate';
 import { notbetriebRootMachine } from './machines/notbetriebRoot.js';
+import { persistState } from './db/persistState.js';
 
 const app = express();
 
@@ -20,10 +21,13 @@ rootActor.subscribe((state) => {
 });
 rootActor.start();
 
-setTimeout(() => {
-	const persistedState = rootActor.getPersistedState();
-	console.log(persistedState?.children['x:4'].state);
+setTimeout(async () => {
+	await persistState();
 }, 7000);
+
+setTimeout(async () => {
+	await persistState();
+}, 14000);
 
 app.listen(8000, () => {
 	console.log('listening on port 8000');

@@ -17,7 +17,7 @@ const prismaInitialDb = new PrismaClient({
 });
 
 async function fetchResources() {
-	return await prismaInitialDb.resource.findMany();
+	return await prismaInitialDb.resource.findMany(); //TODO check, ob client über finally geclosed werden kann
 }
 
 async function createSessionDb(input: Prisma.ResourceCreateManyInput[]) {
