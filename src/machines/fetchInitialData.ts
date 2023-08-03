@@ -6,12 +6,12 @@ import {
 	sendTo,
 } from 'xstate';
 import { Prisma, PrismaClient } from '@prisma/client';
-import prisma from '../db/prismaClient.js';
+import { prisma } from '../db/prismaClient.js';
 
 const prismaInitialDb = new PrismaClient({
 	datasources: {
 		db: {
-			url: `${process.env.DATABASE_URL}/notbetrieb_initial?directConnection=true`,
+			url: `${process.env.DATABASE_URL}/notbetrieb_test?directConnection=true`,
 		},
 	},
 });
@@ -21,7 +21,6 @@ async function fetchResources() {
 }
 
 async function createSessionDb(input: Prisma.ResourceCreateManyInput[]) {
-	console.log('create Db:', input[0]);
 	return await prisma.resource.createMany({ data: input });
 }
 
@@ -83,13 +82,11 @@ export const fetchInitialDataMachine = createMachine({
 			type: 'final',
 		},
 		create_session_db: {
-			entry: [() => console.log('resources fetched entered')],
 			invoke: {
 				src: fromPromise(({ input }) => createSessionDb(input.resources)),
 				input: ({ event }: AnyEventObject) => ({ resources: event.output }),
 				onDone: {
 					actions: [
-						() => console.log('create db done'),
 						sendTo(({ system }) => system.get('Notbetrieb Root'), {
 							type: 'SESSION-DB-CREATED',
 						}),
