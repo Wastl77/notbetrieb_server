@@ -1,7 +1,6 @@
 import { assign, createMachine, sendTo } from 'xstate';
 import { fetchInitialDataMachine } from './fetchInitialData.js';
 import { resource } from './resource.js';
-// import { spawnResources } from './resource.js';
 import { Prisma } from '@prisma/client';
 
 export const notbetriebRootMachine = createMachine(
