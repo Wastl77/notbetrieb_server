@@ -1,7 +1,7 @@
 import { interpret } from 'xstate';
 import { notbetriebRootMachine } from './machines/notbetriebRoot.js';
 import { startPrisma } from './db/prismaClient.js';
-import { getPersistedState } from './db/persistState.js';
+// import { getPersistedState } from './db/persistState.js';
 
 export let rootActor: any;
 
@@ -16,14 +16,12 @@ export const initializeApp = async (sessionName: string | undefined) => {
 			input: undefined,
 		});
 	} else {
-		process.env.SESSION_NAME = sessionName;
-
-		const persistedState = await getPersistedState();
-
-		rootActor = interpret(notbetriebRootMachine, {
-			systemId: 'Notbetrieb Root',
-			input: persistedState.resources,
-		});
+		// process.env.SESSION_NAME = sessionName;
+		// const persistedState = await getPersistedState();
+		// rootActor = interpret(notbetriebRootMachine, {
+		// 	systemId: 'Notbetrieb Root',
+		// 	input: persistedState.resources,
+		// });
 	}
 
 	// rootActor.subscribe((state: any) => {

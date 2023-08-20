@@ -1,7 +1,8 @@
 import { assign, createMachine, sendTo } from 'xstate';
 import { fetchInitialDataMachine } from './fetchInitialData.js';
-import { spawnResources } from './resource.js';
-// import { Prisma } from '@prisma/client';
+import { resource } from './resource.js';
+// import { spawnResources } from './resource.js';
+import { Prisma } from '@prisma/client';
 
 export const notbetriebRootMachine = createMachine(
 	{
@@ -23,10 +24,10 @@ export const notbetriebRootMachine = createMachine(
 					assign({ resources: ({ event }) => event.input }),
 				],
 				always: [
-					{
-						guard: ({ event }) => event.input !== undefined,
-						target: 'spawnResources',
-					},
+					// {
+					// 	guard: ({ event }) => event.input !== undefined,
+					// 	target: 'spawnResources',
+					// },
 					{ target: 'fetchInitialData' },
 				],
 			},
@@ -40,21 +41,21 @@ export const notbetriebRootMachine = createMachine(
 						actions: [
 							// { type: 'logEvent', params: { message: 'fetch success' } },
 							// () => console.log('fetch success'),
-							// assign({
-							// 	ref: ({ event, spawn }) =>
-							// 		event.data.map((res) => {
-							// 			return spawn(resource, {
-							// 				systemId: res.callsign,
-							// 			});
-							// 		}),
-							// }),
+							assign({
+								ref: ({ event, spawn }) =>
+									event.data.map((res: Prisma.ResourceCreateInput) => {
+										return spawn(resource, {
+											systemId: res.callsign,
+										});
+									}),
+							}),
 							// assign({ fetchedResources: ({ event }) => event.data }),
-							({ event, system }) => {
-								const spawnedResources = spawnResources(event.data, undefined);
-								for (const [key, value] of Object.entries(spawnedResources)) {
-									system._set(key, value);
-								}
-							},
+							// ({ event, system }) => {
+							// 	const spawnedResources = spawnResources(event.data, undefined);
+							// 	for (const [key, value] of Object.entries(spawnedResources)) {
+							// 		system._set(key, value);
+							// 	}
+							// },
 						],
 						// target: 'spawnResources',
 					},
@@ -66,21 +67,21 @@ export const notbetriebRootMachine = createMachine(
 					},
 				},
 			},
-			spawnResources: {
-				entry: [
-					({ context }) => console.log('teststate', context),
-					({ context, system }) => {
-						const spawnedResources = spawnResources(
-							undefined,
-							context.resources
-						);
-						for (const [key, value] of Object.entries(spawnedResources)) {
-							system._set(key, value);
-						}
-					},
-				],
-				always: { target: 'ready' },
-			},
+			// spawnResources: {
+			// 	entry: [
+			// 		({ context }) => console.log('teststate', context),
+			// 		({ context, system }) => {
+			// 			const spawnedResources = spawnResources(
+			// 				undefined,
+			// 				context.resources
+			// 			);
+			// 			for (const [key, value] of Object.entries(spawnedResources)) {
+			// 				system._set(key, value);
+			// 			}
+			// 		},
+			// 	],
+			// 	always: { target: 'ready' },
+			// },
 			initializationError: {
 				entry: [() => console.log('Initialization errored')],
 				type: 'final',
