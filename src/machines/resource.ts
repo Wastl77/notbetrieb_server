@@ -4,7 +4,6 @@ export const resource = createMachine({
 	types: {} as {
 		events: { type: 'SET-STATUS-1' };
 	},
-	id: 'resource',
 	context: {},
 	initial: 'available State',
 	states: {
@@ -15,6 +14,17 @@ export const resource = createMachine({
 					on: {
 						'SET-STATUS-1': {
 							target: 'D1',
+							// actions: [
+							// 	sendTo(
+							// 		({ system }) => system.get('root'),
+							// 		({ self }) => {
+							// 			return {
+							// 				type: 'STATE-1-ENTERED',
+							// 				params: { sender: self },
+							// 			};
+							// 		}
+							// 	),
+							// ],
 						},
 					},
 				},

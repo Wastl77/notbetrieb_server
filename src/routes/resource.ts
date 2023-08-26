@@ -8,8 +8,10 @@ router.post('/', (req, res) => {
 	if (typeof callsign === 'string' && typeof event === 'string') {
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
-			callsign,
-			eventType: event,
+			params: {
+				callsign,
+				eventType: event,
+			},
 		});
 	}
 	res.send('Ok');

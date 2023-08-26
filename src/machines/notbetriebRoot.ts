@@ -1,114 +1,146 @@
-import { assign, createMachine, sendTo } from 'xstate';
-import { fetchInitialDataMachine } from './fetchInitialData.js';
+import {
+	assign,
+	createMachine,
+	sendTo,
+	ActorRefFrom,
+	ActorRef,
+	fromPromise,
+} from 'xstate';
+// import { fetchInitialDataMachine } from './fetchInitialData.js';
 import { resource } from './resource.js';
-import { Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { prisma } from '../db/prismaClient.js';
+
+const prismaInitialDb = new PrismaClient({
+	datasources: {
+		db: {
+			url: `${process.env.DATABASE_URL}/notbetrieb_test?directConnection=true`,
+		},
+	},
+});
 
 export const notbetriebRootMachine = createMachine(
 	{
 		/** @xstate-layout N4IgpgJg5mDOIC5QDkD2AXARmdAnAlmJgAQBKqGAdAJIB2+6+AhgDbGzpPpgDEAYgFEAKgGEAEgFoAygFURIgVKkBtAAwBdRKAAOqWA3ypaWkAA9EAJlUA2SgFZVAdgAcF6wGZnzgIzOb1gBoQAE9Eb1UAFkoIgE446wsIxxjrB1ULAF8soNpUCDgTNCwcAiIyCnQTXX1GIxNzBAlAkMQm7JAi7DxCEnIqOgNWdk5uKr0DOqQzRAiLINCEH2i4mLtHdztvOxjHdfbOkp7yqlhtJgB3WmJcOFQAV1wAYwKp6onjKYb3VcoYmwsYt53BZnHF3I55oglml0rNnBFrK4gVkskA */
-		// types: {} as {
-		// 	events:
-		// 		| { type: 'FETCH-SUCCESS'; data: Prisma.ResourceCreateInput[] }
-		// 		| { type: 'INITIALIZATION-ERROR' }
-		// 		| { type: 'RESOURCE-EVENT'; callsign: string; eventType: string }
-		// 		| { type: 'SESSION-DB-CREATED' };
-		// },
+		types: {} as {
+			//type actors
+			input: { resources: Prisma.ResourceCreateManyInput[] }; // input trotzdem nicht strongly typed
+			events:
+				| {
+						type: 'RESOURCE-EVENT';
+						params: { callsign: string; eventType: string };
+				  }
+				| {
+						type: 'STATE-1-ENTERED';
+						params: { sender: ActorRef<{ type: 'SET-STATUS-1' }, any> };
+				  };
+			context: {
+				isSession: boolean;
+				resourceActors: ActorRefFrom<typeof resource>[] | null;
+				fetchResult: Prisma.ResourceCreateManyInput[] | null;
+			};
+		},
 		id: 'Notbetrieb Root',
-		initial: 'initialize',
+		context: { isSession: false, resourceActors: null, fetchResult: null },
+		initial: 'fetchInitialData',
 		states: {
-			initialize: {
-				entry: [
-					({ event }) => console.log('entry root input', event.input),
-					//
-					assign({ resources: ({ event }) => event.input }),
-				],
-				always: [
-					// {
-					// 	guard: ({ event }) => event.input !== undefined,
-					// 	target: 'spawnResources',
-					// },
-					{ target: 'fetchInitialData' },
-				],
-			},
 			fetchInitialData: {
 				invoke: {
-					id: 'fetchMachine',
-					src: fetchInitialDataMachine,
-				},
-				on: {
-					'FETCH-SUCCESS': {
+					src: 'fetchInitialData',
+					onDone: {
 						actions: [
-							// { type: 'logEvent', params: { message: 'fetch success' } },
-							// () => console.log('fetch success'),
 							assign({
-								ref: ({ event, spawn }) =>
-									event.data.map((res: Prisma.ResourceCreateInput) => {
+								resourceActors: ({ event, spawn }) =>
+									event.output.map((res: Prisma.ResourceCreateInput) => {
 										return spawn(resource, {
 											systemId: res.callsign,
+											id: res.callsign,
 										});
 									}),
 							}),
-							// assign({ fetchedResources: ({ event }) => event.data }),
-							// ({ event, system }) => {
-							// 	const spawnedResources = spawnResources(event.data, undefined);
-							// 	for (const [key, value] of Object.entries(spawnedResources)) {
-							// 		system._set(key, value);
-							// 	}
-							// },
+							assign({ fetchResult: ({ event }) => event.output }),
 						],
-						// target: 'spawnResources',
-					},
-					'SESSION-DB-CREATED': {
-						target: 'ready',
-					},
-					'INITIALIZATION-ERROR': {
-						target: 'initializationError',
+						target: 'createSessionDb',
 					},
 				},
+				// 	invoke: {
+				// 		id: 'fetchMachine',
+				// 		src: fetchInitialDataMachine,
+				// 	},
+				// 	on: {
+				// 		'FETCH-SUCCESS': {
+				// 			actions: [
+				// assign({
+				// 	ref: ({ event, spawn }) =>
+				// 		event.params.data.map((res: Prisma.ResourceCreateInput) => {
+				// 			return spawn(resource, {
+				// 				systemId: res.callsign,
+				// 				id: res.callsign,
+				// 			});
+				// 		}),
+				// }),
+				// 			],
+				// 			target: 'createSessionDb',
+				// 		},
+				// 		'INITIALIZATION-ERROR': {
+				// 			target: 'initializationError',
+				// 		},
+				// 	},
 			},
-			// spawnResources: {
-			// 	entry: [
-			// 		({ context }) => console.log('teststate', context),
-			// 		({ context, system }) => {
-			// 			const spawnedResources = spawnResources(
-			// 				undefined,
-			// 				context.resources
-			// 			);
-			// 			for (const [key, value] of Object.entries(spawnedResources)) {
-			// 				system._set(key, value);
-			// 			}
-			// 		},
-			// 	],
-			// 	always: { target: 'ready' },
-			// },
 			initializationError: {
 				entry: [() => console.log('Initialization errored')],
 				type: 'final',
 			},
+			createSessionDb: {
+				entry: [({ context }) => console.log(context.fetchResult)],
+				invoke: {
+					// src: 'createSessionDb',
+					src: 'createSessionDb',
+					input: ({ context }) => ({
+						resources: context.fetchResult,
+					}),
+					onDone: {
+						target: 'ready',
+					},
+				},
+			},
 			ready: {
-				entry: [assign({ isSession: true })],
+				entry: [assign({ isSession: true }), assign({ fetchResult: null })],
 				on: {
 					'RESOURCE-EVENT': {
 						actions: [
 							sendTo(
-								({ event, system }) => system.get(event.callsign),
+								({ event, system }) => system.get(event.params.callsign),
 								({ event }) => {
-									return { type: event.eventType };
+									return { type: event.params.eventType };
 								}
 							),
 							() => console.log('resource event triggered'),
 						],
 					},
+					'STATE-1-ENTERED': {
+						actions: [
+							({ event }) =>
+								console.log('Message from child ', event.params.sender.id),
+						],
+					},
 				},
 			},
 		},
+	},
+	{
+		actors: {
+			createSessionDb: fromPromise(
+				async (
+					{ input }: any //TODO typing
+				) =>
+					await prisma.resource.createMany({
+						data: input.resources,
+					})
+			),
+			fetchInitialData: fromPromise(async () => {
+				return await prismaInitialDb.resource.findMany();
+			}),
+		},
 	}
-	// {
-	// 	actions: {
-	// 		// @ts-ignore
-	// 		logEvent: ({ params }) => {
-	// 			console.log(params.message);
-	// 		},
-	// 	},
-	// }
 );

@@ -46,11 +46,13 @@ export const fetchInitialDataMachine = createMachine({
 					target: 'create_session_db',
 					actions: [
 						sendTo(
-							({ system }) => system.get('Notbetrieb Root'),
+							({ system }) => system.get('root'),
 							({ event }) => {
 								return {
 									type: 'FETCH-SUCCESS',
-									data: event.output as Prisma.ResourceCreateInput[],
+									params: {
+										data: event.output as Prisma.ResourceCreateInput[],
+									},
 								};
 							}
 						),
@@ -73,7 +75,7 @@ export const fetchInitialDataMachine = createMachine({
 		failed: {
 			entry: [
 				sendTo(
-					({ system }) => system.get('Notbetrieb Root'),
+					({ system }) => system.get('root'),
 					() => {
 						return { type: 'INITIALIZATION-ERROR' };
 					}
@@ -87,7 +89,7 @@ export const fetchInitialDataMachine = createMachine({
 				input: ({ event }: AnyEventObject) => ({ resources: event.output }),
 				onDone: {
 					actions: [
-						sendTo(({ system }) => system.get('Notbetrieb Root'), {
+						sendTo(({ system }) => system.get('root'), {
 							type: 'SESSION-DB-CREATED',
 						}),
 					],
