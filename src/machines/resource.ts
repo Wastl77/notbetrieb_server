@@ -14,17 +14,6 @@ export const resource = createMachine({
 					on: {
 						'SET-STATUS-1': {
 							target: 'D1',
-							// actions: [
-							// 	sendTo(
-							// 		({ system }) => system.get('root'),
-							// 		({ self }) => {
-							// 			return {
-							// 				type: 'STATE-1-ENTERED',
-							// 				params: { sender: self },
-							// 			};
-							// 		}
-							// 	),
-							// ],
 						},
 					},
 				},

@@ -36,9 +36,19 @@ export const initializeApp = async (sessionName: string | undefined) => {
 	);
 
 	Object.keys(rootActorSnapshot.children).forEach((child) => {
-		rootActorSnapshot.children[child].subscribe((snapshot: any) =>
-			console.log('rootActor child subscribe ', snapshot.value, 'child ', child)
-		);
+		let previousSnapshot = rootActorSnapshot.children[child].getSnapshot();
+		rootActorSnapshot.children[child].subscribe((snapshot: any) => {
+			console.log(
+				'rootActor child subscribe ',
+				snapshot.value,
+				'child ',
+				child
+			);
+			if (previousSnapshot === snapshot) {
+				console.log('true'); // hier in mongodb schreiben
+			}
+			previousSnapshot = snapshot;
+		});
 	});
 
 	// startPrisma();

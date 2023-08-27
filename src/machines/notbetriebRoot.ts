@@ -3,10 +3,8 @@ import {
 	createMachine,
 	sendTo,
 	ActorRefFrom,
-	ActorRef,
 	fromPromise,
 } from 'xstate';
-// import { fetchInitialDataMachine } from './fetchInitialData.js';
 import { resource } from './resource.js';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../db/prismaClient.js';
@@ -25,15 +23,10 @@ export const notbetriebRootMachine = createMachine(
 		types: {} as {
 			//type actors
 			input: { resources: Prisma.ResourceCreateManyInput[] }; // input trotzdem nicht strongly typed
-			events:
-				| {
-						type: 'RESOURCE-EVENT';
-						params: { callsign: string; eventType: string };
-				  }
-				| {
-						type: 'STATE-1-ENTERED';
-						params: { sender: ActorRef<{ type: 'SET-STATUS-1' }, any> };
-				  };
+			events: {
+				type: 'RESOURCE-EVENT';
+				params: { callsign: string; eventType: string };
+			};
 			context: {
 				isSession: boolean;
 				resourceActors: ActorRefFrom<typeof resource>[] | null;
@@ -63,38 +56,14 @@ export const notbetriebRootMachine = createMachine(
 						target: 'createSessionDb',
 					},
 				},
-				// 	invoke: {
-				// 		id: 'fetchMachine',
-				// 		src: fetchInitialDataMachine,
-				// 	},
-				// 	on: {
-				// 		'FETCH-SUCCESS': {
-				// 			actions: [
-				// assign({
-				// 	ref: ({ event, spawn }) =>
-				// 		event.params.data.map((res: Prisma.ResourceCreateInput) => {
-				// 			return spawn(resource, {
-				// 				systemId: res.callsign,
-				// 				id: res.callsign,
-				// 			});
-				// 		}),
-				// }),
-				// 			],
-				// 			target: 'createSessionDb',
-				// 		},
-				// 		'INITIALIZATION-ERROR': {
-				// 			target: 'initializationError',
-				// 		},
-				// 	},
 			},
 			initializationError: {
+				//TODO in onError schieben und retry nach ein paar Sekunden
 				entry: [() => console.log('Initialization errored')],
 				type: 'final',
 			},
 			createSessionDb: {
-				entry: [({ context }) => console.log(context.fetchResult)],
 				invoke: {
-					// src: 'createSessionDb',
 					src: 'createSessionDb',
 					input: ({ context }) => ({
 						resources: context.fetchResult,
@@ -116,12 +85,6 @@ export const notbetriebRootMachine = createMachine(
 								}
 							),
 							() => console.log('resource event triggered'),
-						],
-					},
-					'STATE-1-ENTERED': {
-						actions: [
-							({ event }) =>
-								console.log('Message from child ', event.params.sender.id),
 						],
 					},
 				},
