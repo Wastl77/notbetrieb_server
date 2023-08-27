@@ -55,12 +55,11 @@ export const notbetriebRootMachine = createMachine(
 						],
 						target: 'createSessionDb',
 					},
+					onError: {
+						actions: [() => console.log('Error fetching initial data')],
+						target: 'fetchError',
+					},
 				},
-			},
-			initializationError: {
-				//TODO in onError schieben und retry nach ein paar Sekunden
-				entry: [() => console.log('Initialization errored')],
-				type: 'final',
 			},
 			createSessionDb: {
 				invoke: {
@@ -70,6 +69,14 @@ export const notbetriebRootMachine = createMachine(
 					}),
 					onDone: {
 						target: 'ready',
+					},
+				},
+			},
+			fetchError: {
+				//TODO add abort controller when implemented by xstate
+				after: {
+					3000: {
+						target: 'fetchInitialData',
 					},
 				},
 			},
@@ -103,6 +110,7 @@ export const notbetriebRootMachine = createMachine(
 			),
 			fetchInitialData: fromPromise(async () => {
 				return await prismaInitialDb.resource.findMany();
+				// return new Promise((resolve, reject) => setTimeout(reject, 3000));
 			}),
 		},
 	}
