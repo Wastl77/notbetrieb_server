@@ -4,6 +4,10 @@ import { startPrisma } from './db/prismaClient.js';
 
 export let rootActor: Actor<typeof notbetriebRootMachine>;
 
+/**
+ * Initializes the app.
+ * @param {string} [sessionName] - Optional name for the session.
+ */
 export const initializeApp = async (sessionName: string | undefined) => {
 	console.log('initialize app function called');
 	if (sessionName === undefined) {

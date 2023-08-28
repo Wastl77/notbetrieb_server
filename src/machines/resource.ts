@@ -2,7 +2,7 @@ import { createMachine } from 'xstate';
 
 export const resource = createMachine({
 	types: {} as {
-		events: { type: 'SET-STATUS-1' };
+		events: { type: 'SET-STATUS-QtD2' };
 	},
 	context: {},
 	initial: 'available State',
@@ -12,13 +12,13 @@ export const resource = createMachine({
 			states: {
 				D2: {
 					on: {
-						'SET-STATUS-1': {
-							target: 'D1',
+						'SET-STATUS-QtD2': {
+							target: 'QtD2',
 						},
 					},
 				},
-				D1: {
-					entry: [() => console.log('D1 state entered')],
+				QtD2: {
+					entry: [() => console.log('QtD2 state entered')],
 				},
 			},
 		},
