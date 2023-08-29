@@ -6,8 +6,10 @@ import {
 	fromPromise,
 } from 'xstate';
 import { resource } from './resource.js';
+import { scene } from './scene.js';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../db/prismaClient.js';
+import { SceneInputType } from '../../types.js';
 
 const prismaInitialDb = new PrismaClient({
 	datasources: {
@@ -23,18 +25,31 @@ export const notbetriebRootMachine = createMachine(
 		types: {} as {
 			//type actors
 			input: { resources: Prisma.ResourceCreateManyInput[] }; // input trotzdem nicht strongly typed
-			events: {
-				type: 'RESOURCE-EVENT';
-				params: { callsign: string; eventType: string };
-			};
+			events:
+				| {
+						type: 'RESOURCE-EVENT';
+						params: { callsign: string; eventType: string };
+				  }
+				| {
+						type: 'CREATE-SCENE';
+						params: SceneInputType;
+				  };
 			context: {
 				isSession: boolean;
 				resourceActors: ActorRefFrom<typeof resource>[] | null;
+				sceneActor: ActorRefFrom<typeof scene> | null;
 				fetchResult: Prisma.ResourceCreateManyInput[] | null;
+				sceneNumber: number;
 			};
 		},
 		id: 'Notbetrieb Root',
-		context: { isSession: false, resourceActors: null, fetchResult: null },
+		context: {
+			isSession: false,
+			resourceActors: null,
+			sceneActor: null,
+			fetchResult: null,
+			sceneNumber: 1,
+		},
 		initial: 'fetchInitialData',
 		states: {
 			fetchInitialData: {
@@ -92,6 +107,27 @@ export const notbetriebRootMachine = createMachine(
 								}
 							),
 							() => console.log('resource event triggered'),
+						],
+					},
+					'CREATE-SCENE': {
+						actions: [
+							assign({
+								sceneActor: ({ event, context, spawn }) => {
+									return spawn(scene, {
+										input: {
+											adress: {
+												street: event.params.adress.street,
+												object: event.params.adress.object,
+												district: event.params.adress.district,
+											},
+											alarmKeyword: event.params.alarmKeyword,
+											resources: event.params.resources,
+											sceneNumber: context.sceneNumber,
+										},
+									});
+								},
+								sceneNumber: ({ context }) => context.sceneNumber + 1,
+							}),
 						],
 					},
 				},
