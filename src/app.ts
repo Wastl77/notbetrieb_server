@@ -26,7 +26,7 @@ export const initializeApp = async (sessionName: string | undefined) => {
 
 	rootActor.subscribe({
 		next(state: any) {
-			console.log('Actual State', state.value, 'Event', state.event);
+			console.log('Actual State', state.value, 'context: ', state.context);
 		},
 		complete() {
 			console.log('workflow completed', rootActor.getSnapshot().output);
@@ -54,6 +54,11 @@ export const initializeApp = async (sessionName: string | undefined) => {
 			previousSnapshot = snapshot;
 		});
 	});
+
+	setTimeout(() => {
+		const snapshot = rootActor.getSnapshot();
+		console.log(snapshot.children['sceneNumber1'].getSnapshot().context);
+	}, 12000);
 
 	// startPrisma();
 	console.log('App initialized');

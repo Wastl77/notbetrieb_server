@@ -3,10 +3,10 @@
  *
  * @typedef {Object} SceneInputType
  *
- * @property {Object} adress - The address object.
- * @property {string} adress.street - The street name.
- * @property {string|null} adress.object - The building/object name.
- * @property {string|null} adress.district - The district name.
+ * @property {Object} address - The address object.
+ * @property {string} address.street - The street name.
+ * @property {string} address.object - The optional building/object name.
+ * @property {string} address.district - The optional district name.
  *
  * @property {string} alarmKeyword - The alarm keyword.
  * @property {string[]} resources - Array of resource strings.
@@ -14,12 +14,11 @@
  */
 
 export type SceneInputType = {
-	adress: {
+	address: {
 		street: string;
-		object: string | null;
-		district: string | null;
+		object?: string;
+		district?: string;
 	};
 	alarmKeyword: string;
-	resources: string[];
 	sceneNumber?: number;
 };

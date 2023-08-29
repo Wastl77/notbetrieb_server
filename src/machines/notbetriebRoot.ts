@@ -11,6 +11,8 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../db/prismaClient.js';
 import { SceneInputType } from '../../types.js';
 
+// see https://github.com/statelyai/xstate/blob/next/examples/friends-list-react/src/friends.machine.ts
+
 const prismaInitialDb = new PrismaClient({
 	datasources: {
 		db: {
@@ -36,8 +38,8 @@ export const notbetriebRootMachine = createMachine(
 				  };
 			context: {
 				isSession: boolean;
-				resourceActors: ActorRefFrom<typeof resource>[] | null;
-				sceneActor: ActorRefFrom<typeof scene> | null;
+				resourceActors: ActorRefFrom<typeof resource>[];
+				sceneActor: ActorRefFrom<typeof scene>[];
 				fetchResult: Prisma.ResourceCreateManyInput[] | null;
 				sceneNumber: number;
 			};
@@ -45,8 +47,8 @@ export const notbetriebRootMachine = createMachine(
 		id: 'Notbetrieb Root',
 		context: {
 			isSession: false,
-			resourceActors: null,
-			sceneActor: null,
+			resourceActors: [],
+			sceneActor: [],
 			fetchResult: null,
 			sceneNumber: 1,
 		},
@@ -65,8 +67,8 @@ export const notbetriebRootMachine = createMachine(
 											id: res.callsign,
 										});
 									}),
+								fetchResult: ({ event }) => event.output,
 							}),
-							assign({ fetchResult: ({ event }) => event.output }),
 						],
 						target: 'createSessionDb',
 					},
@@ -96,7 +98,7 @@ export const notbetriebRootMachine = createMachine(
 				},
 			},
 			ready: {
-				entry: [assign({ isSession: true }), assign({ fetchResult: null })],
+				entry: [assign({ isSession: true, fetchResult: null })],
 				on: {
 					'RESOURCE-EVENT': {
 						actions: [
@@ -112,20 +114,22 @@ export const notbetriebRootMachine = createMachine(
 					'CREATE-SCENE': {
 						actions: [
 							assign({
-								sceneActor: ({ event, context, spawn }) => {
-									return spawn(scene, {
-										input: {
-											adress: {
-												street: event.params.adress.street,
-												object: event.params.adress.object,
-												district: event.params.adress.district,
+								sceneActor: ({ event, context, spawn }) =>
+									context.sceneActor.concat(
+										spawn(scene, {
+											input: {
+												address: {
+													street: event.params.address.street,
+													object: event.params.address.object,
+													district: event.params.address.district,
+												},
+												alarmKeyword: event.params.alarmKeyword,
+												sceneNumber: context.sceneNumber,
 											},
-											alarmKeyword: event.params.alarmKeyword,
-											resources: event.params.resources,
-											sceneNumber: context.sceneNumber,
-										},
-									});
-								},
+											id: `sceneNumber${context.sceneNumber}`,
+											systemId: `sceneNumber${context.sceneNumber}`,
+										})
+									),
 								sceneNumber: ({ context }) => context.sceneNumber + 1,
 							}),
 						],

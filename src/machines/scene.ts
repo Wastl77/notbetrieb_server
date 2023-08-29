@@ -1,35 +1,38 @@
-import { createMachine, assign } from 'xstate';
+import { createMachine } from 'xstate';
 import { SceneInputType } from '../../types.js';
 
 export const scene = createMachine(
 	{
 		types: {} as {
 			context: {
-				adress: {
-					street: string | null;
-					object: string | null;
-					district: string | null;
+				address: {
+					//TODO type ScenInputType mergen, dass hier alles doppelte weg kann
+					street: string;
+					object?: string;
+					district?: string;
 				};
 				alarmKeyword: string;
-				resourceLines: {
+				resourceLines?: {
 					id: number;
 					type: string;
 					callsign: string | null;
 					status: 'not disposed' | 'disposed' | 'cancelled';
 					cancelledCallsign?: string;
 				}[];
+				sceneNumber: number;
 			};
 			input: SceneInputType;
 		},
-		context: {
-			adress: { street: null, object: null, district: null },
-			alarmKeyword: '',
+		context: ({ input }): any => ({
+			address: { ...input.address },
+			alarmKeyword: input.alarmKeyword,
 			resourceLines: [],
-		},
+			sceneNumber: input.sceneNumber,
+		}),
 		initial: 'openScene',
 		states: {
 			openScene: {
-				entry: ['resolveResources'],
+				// entry: ['resolveResources'],
 				initial: 'waitingScene',
 				states: {
 					waitingScene: {},
@@ -37,20 +40,20 @@ export const scene = createMachine(
 				},
 			},
 		},
-	},
-	{
-		actions: {
-			resolveResources: ({ event }) =>
-				assign({
-					resourceLines: event.input.resources.map(
-						(resource: string, index: number) => ({
-							id: index,
-							type: resource,
-							callsign: null,
-							status: 'not disposed',
-						})
-					),
-				}),
-		},
 	}
+	// {
+	// 	actions: {
+	// 		resolveResources: ({ event }) =>
+	// 			assign({
+	// 				resourceLines: event.input.resources.map(
+	// 					(resource: string, index: number) => ({
+	// 						id: index,
+	// 						type: resource,
+	// 						callsign: null,
+	// 						status: 'not disposed',
+	// 					})
+	// 				),
+	// 			}),
+	// 	},
+	// }
 );
