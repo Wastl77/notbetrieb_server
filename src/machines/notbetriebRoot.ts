@@ -9,7 +9,7 @@ import { resource } from './resource.js';
 import { scene } from './scene.js';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../db/prismaClient.js';
-import { SceneInputType } from '../../types.js';
+import { CreateSceneInput } from '../../types.js';
 
 // see https://github.com/statelyai/xstate/blob/next/examples/friends-list-react/src/friends.machine.ts
 
@@ -34,7 +34,7 @@ export const notbetriebRootMachine = createMachine(
 				  }
 				| {
 						type: 'CREATE-SCENE';
-						params: SceneInputType;
+						params: CreateSceneInput;
 				  };
 			context: {
 				isSession: boolean;

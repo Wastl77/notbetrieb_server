@@ -13,12 +13,22 @@
  * @property {string} sceneNumber - The optional number of the scene.
  */
 
-export type SceneInputType = {
+export type CreateSceneInput = {
 	address: {
 		street: string;
 		object?: string;
 		district?: string;
 	};
 	alarmKeyword: string;
-	sceneNumber?: number;
+	sceneNumber?: number; //TODO create input type for the machine
+};
+
+export type Scene = CreateSceneInput & {
+	resourceLines: {
+		id: number;
+		type: string;
+		callsign: string | null;
+		status: 'not disposed' | 'disposed' | 'cancelled';
+		cancelledCallsign?: string;
+	}[];
 };
