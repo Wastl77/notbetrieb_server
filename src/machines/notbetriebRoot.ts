@@ -9,7 +9,7 @@ import { resource } from './resource.js';
 import { scene } from './scene.js';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '../db/prismaClient.js';
-import { CreateSceneInput } from '../../types.js';
+import { CreateSceneMachineInput } from '../../types.js';
 
 // see https://github.com/statelyai/xstate/blob/next/examples/friends-list-react/src/friends.machine.ts
 
@@ -34,7 +34,7 @@ export const notbetriebRootMachine = createMachine(
 				  }
 				| {
 						type: 'CREATE-SCENE';
-						params: CreateSceneInput;
+						params: CreateSceneMachineInput;
 				  };
 			context: {
 				isSession: boolean;
@@ -125,6 +125,7 @@ export const notbetriebRootMachine = createMachine(
 												},
 												alarmKeyword: event.params.alarmKeyword,
 												sceneNumber: context.sceneNumber,
+												initialResources: event.params.initialResources,
 											},
 											id: `sceneNumber${context.sceneNumber}`,
 											systemId: `sceneNumber${context.sceneNumber}`,

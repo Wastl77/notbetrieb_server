@@ -23,9 +23,13 @@ export type CreateSceneInput = {
 	sceneNumber?: number; //TODO create input type for the machine
 };
 
-export type Scene = CreateSceneInput & {
+export type CreateSceneMachineInput = CreateSceneInput & {
+	initialResources: string[];
+};
+
+export type Scene = CreateSceneMachineInput & {
 	resourceLines: {
-		id: number;
+		index: number;
 		type: string;
 		callsign: string | null;
 		status: 'not disposed' | 'disposed' | 'cancelled';

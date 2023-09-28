@@ -1,41 +1,43 @@
-import { createMachine } from 'xstate';
-import { CreateSceneInput, Scene } from '../../types.js';
+import { createMachine, assign } from 'xstate';
+import { CreateSceneMachineInput, Scene } from '../../types.js';
 
 export const scene = createMachine(
 	{
 		types: {} as {
 			context: Scene;
-			input: CreateSceneInput;
+			input: CreateSceneMachineInput;
 		},
 		context: ({ input }) => ({
 			...input,
 			resourceLines: [],
 		}),
-		initial: 'openScene',
+		initial: 'open',
 		states: {
-			openScene: {
-				// entry: ['resolveResources'],
-				initial: 'waitingScene',
+			open: {
+				entry: ['addInitialResources'],
+				initial: 'waiting',
 				states: {
-					waitingScene: {},
-					alarmedScene: {},
+					waiting: {},
+					alarmed: {},
 				},
 			},
 		},
+	},
+	{
+		actions: {
+			addInitialResources: ({ context, event }) =>
+				assign({
+					resourceLines: event.input.initialResources.forEach(
+						(resource: string) => {
+							context.resourceLines.push({
+								index: context.resourceLines.length,
+								type: resource,
+								callsign: null,
+								status: 'not disposed',
+							});
+						}
+					),
+				}),
+		},
 	}
-	// {
-	// 	actions: {
-	// 		resolveResources: ({ event }) =>
-	// 			assign({
-	// 				resourceLines: event.input.resources.map(
-	// 					(resource: string, index: number) => ({
-	// 						id: index,
-	// 						type: resource,
-	// 						callsign: null,
-	// 						status: 'not disposed',
-	// 					})
-	// 				),
-	// 			}),
-	// 	},
-	// }
 );

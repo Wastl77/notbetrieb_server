@@ -9,7 +9,7 @@ router.post('/', (req, res) => {
 	const sceneInputObject = JSON.parse(sceneInput as unknown as string);
 	rootActor.send({
 		type: 'CREATE-SCENE',
-		params: sceneInputObject,
+		params: { ...sceneInputObject, initialResources: ['rtw', 'nef'] },
 	});
 	res.send('Ok');
 });
