@@ -32,7 +32,7 @@ export type Scene = CreateSceneMachineInput & {
 		index: number;
 		type: string;
 		callsign: string | null;
-		status: 'not disposed' | 'disposed' | 'cancelled';
+		status: 'not disposed' | 'disposed' | 'cancelled' | 'not neccessary';
 		cancelledCallsign?: string;
 	}[];
 };
