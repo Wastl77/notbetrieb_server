@@ -10,7 +10,7 @@
 		"start-without-script": "nodemon --exec node --loader ts-node/esm src/index.ts",
 		"start": "node ./start.js",
 		"build": "tsc",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "vitest"
 	},
 	"author": "Sebastian Beier",
 	"license": "ISC",
@@ -26,7 +26,8 @@
 		"nodemon": "^2.0.22",
 		"prisma": "^5.0.0",
 		"ts-node": "^10.9.1",
-		"typescript": "^5.0.4"
+		"typescript": "^5.0.4",
+		"vitest": "^0.34.6"
 	},
 	"dependencies": {
 		"@prisma/client": "^5.0.0",
