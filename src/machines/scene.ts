@@ -1,4 +1,5 @@
-import { createMachine, assign } from 'xstate';
+import { createMachine, assign, choose } from 'xstate';
+import { upgradeAlarmkeyword } from '../util/upgradeAlarmkeyword.js';
 import { CreateSceneMachineInput, Scene } from '../../types.js';
 
 export const scene = createMachine(
@@ -12,6 +13,11 @@ export const scene = createMachine(
 			resourceLines: [],
 		}),
 		initial: 'open',
+		on: {
+			'UPGRADE-ALARMKEYWORD': {
+				actions: ['addUpgradeResources', 'updateAlarmKeyword'],
+			},
+		},
 		states: {
 			open: {
 				entry: ['addInitialResources'],
@@ -38,6 +44,9 @@ export const scene = createMachine(
 						}
 					),
 				}),
+			addUpgradeResources: ({ context, event }) => {
+				upgradeAlarmkeyword(context.alarmKeyword, event.params.newKeyword); //! neue units assignen
+			},
 		},
 	}
 );

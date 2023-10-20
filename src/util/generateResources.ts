@@ -1,8 +1,8 @@
-import { alarmKeywordConfiguration } from '../util/alarmKeywordConfiguration.js';
+import { alarmKeywordConfiguration } from './alarmKeywordConfiguration.js';
 
-export function generateInitialResources(alarmKeyword: string) {
+export function generateResources(alarmKeyword: string) {
 	const parts = alarmKeyword.split('+');
-	const initialResources: string[] = [];
+	const resources: string[] = [];
 	let baseKeyword = null;
 
 	for (const part of parts) {
@@ -11,8 +11,8 @@ export function generateInitialResources(alarmKeyword: string) {
 			if (alarmKeywordConfiguration[keyword]) {
 				baseKeyword = keyword;
 				const config = alarmKeywordConfiguration[keyword];
-				if (config.units.every((unit) => !initialResources.includes(unit))) {
-					initialResources.push(...config.units);
+				if (config.units.every((unit) => !resources.includes(unit))) {
+					resources.push(...config.units);
 				}
 				if (addition) {
 					const additionString = addition.replace(']', '');
@@ -20,9 +20,15 @@ export function generateInitialResources(alarmKeyword: string) {
 					for (const additionPart of additionParts) {
 						if (config.allowedAdditions?.includes(additionPart)) {
 							const additionConfig = alarmKeywordConfiguration[additionPart];
-							for (const unit of additionConfig.units) {
-								if (!initialResources.includes(unit)) {
-									initialResources.push(unit);
+							if (additionString.includes('#')) {
+								for (const unit of additionConfig.units) {
+									if (!resources.includes(unit)) {
+										resources.push(unit);
+									}
+								}
+							} else {
+								for (const unit of additionConfig.units) {
+									resources.push(unit);
 								}
 							}
 						}
@@ -36,13 +42,13 @@ export function generateInitialResources(alarmKeyword: string) {
 					if (baseKeyword !== null) {
 						return [];
 					}
-					if (config.units.every((unit) => !initialResources.includes(unit))) {
-						initialResources.push(...config.units);
+					if (config.units.every((unit) => !resources.includes(unit))) {
+						resources.push(...config.units);
 					}
 					baseKeyword = part;
 				}
 				if (config.type === 'module') {
-					initialResources.push(...config.units);
+					resources.push(...config.units);
 				}
 			} else {
 				const config2 = alarmKeywordConfiguration[part.replace(/\d+/g, '')];
@@ -57,7 +63,7 @@ export function generateInitialResources(alarmKeyword: string) {
 					}
 					for (const unit of config2.units) {
 						for (let i = 0; i < count; i++) {
-							initialResources.push(unit);
+							resources.push(unit);
 						}
 					}
 				} else {
@@ -66,5 +72,5 @@ export function generateInitialResources(alarmKeyword: string) {
 			}
 		}
 	}
-	return initialResources;
+	return resources;
 }
