@@ -1,5 +1,6 @@
-import { createMachine, assign, choose } from 'xstate';
+import { createMachine, assign } from 'xstate';
 import { upgradeAlarmkeyword } from '../util/upgradeAlarmkeyword.js';
+import { differentiateResources } from '../util/differentiateResources.js';
 import { CreateSceneMachineInput, Scene } from '../../types.js';
 
 export const scene = createMachine(
@@ -45,7 +46,30 @@ export const scene = createMachine(
 					),
 				}),
 			addUpgradeResources: ({ context, event }) => {
-				upgradeAlarmkeyword(context.alarmKeyword, event.params.newKeyword); //! neue units assignen
+				const totalResources = upgradeAlarmkeyword(
+					context.alarmKeyword,
+					event.params.newKeyword
+				);
+				const actualResources: string[] = [];
+				context.resourceLines.forEach((line) => {
+					line.status !== 'finished' && line.status !== 'not neccessary'
+						? actualResources.push(line.type)
+						: null;
+				});
+				const resourcesToAdd = differentiateResources(
+					actualResources,
+					totalResources
+				);
+				assign({
+					resourceLines: resourcesToAdd.forEach((resource: string) => {
+						context.resourceLines.push({
+							index: context.resourceLines.length,
+							type: resource,
+							callsign: null,
+							status: 'not disposed',
+						});
+					}),
+				});
 			},
 		},
 	}
