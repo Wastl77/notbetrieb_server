@@ -30,7 +30,11 @@ export const notbetriebRootMachine = createMachine(
 			events:
 				| {
 						type: 'RESOURCE-EVENT';
-						params: { callsign: string; eventType: string };
+						params: {
+							callsign: string;
+							eventType: string;
+							params: { sceneNumber?: string; resourceLineIndex?: string };
+						};
 				  }
 				| {
 						type: 'CREATE-SCENE';
@@ -69,6 +73,10 @@ export const notbetriebRootMachine = createMachine(
 										return spawn(resource, {
 											systemId: res.callsign,
 											id: res.callsign,
+											input: {
+												resourceType: res.type,
+												callsign: res.callsign,
+											},
 										});
 									}),
 								fetchResult: ({ event }) => event.output,
@@ -109,7 +117,10 @@ export const notbetriebRootMachine = createMachine(
 							sendTo(
 								({ event, system }) => system.get(event.params.callsign),
 								({ event }) => {
-									return { type: event.params.eventType };
+									return {
+										type: event.params.eventType,
+										params: { ...event.params.params },
+									};
 								}
 							),
 							() => console.log('resource event triggered'),
@@ -140,6 +151,7 @@ export const notbetriebRootMachine = createMachine(
 						],
 					},
 					'UPGRADE-ALARMKEYWORD': {
+						//! wie resource event machen, nicht einzelne events für scene und gesammelt für resource
 						actions: [
 							sendTo(
 								({ event, system }) =>

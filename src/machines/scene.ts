@@ -8,6 +8,22 @@ export const scene = createMachine(
 		types: {} as {
 			context: Scene;
 			input: CreateSceneMachineInput;
+			actions: {
+				type:
+					| 'addUpgradeResources'
+					| 'updateAlarmKeyword'
+					| 'disposeResource'
+					| 'addInitialResources';
+			};
+			// events:
+			// 	| {
+			// 			type: 'UPGRADE-ALARMKEYWORD';
+			// 			params: { newKeyword: string };
+			// 	  }
+			// 	| {
+			// 			type: 'DISPOSE-RESOURCE';
+			// 			params: { sceneNumber: string; resourceLineIndex: string };
+			// 	  };
 		},
 		context: ({ input }) => ({
 			...input,
@@ -16,7 +32,10 @@ export const scene = createMachine(
 		initial: 'open',
 		on: {
 			'UPGRADE-ALARMKEYWORD': {
-				actions: ['addUpgradeResources', 'updateAlarmKeyword'],
+				actions: ['addUpgradeResources', 'updateAlarmKeyword'], //!updateAlarmkeyword muss noch gemacht werden
+			},
+			'DISPOSE-RESOURCE': {
+				actions: ['disposeResource'],
 			},
 		},
 		states: {
@@ -32,13 +51,14 @@ export const scene = createMachine(
 	},
 	{
 		actions: {
-			addInitialResources: ({ context, event }) =>
+			addInitialResources: ({ context }) =>
 				assign({
-					resourceLines: event.input.initialResources.forEach(
+					resourceLines: context.initialResources.forEach(
 						(resource: string) => {
 							context.resourceLines.push({
 								index: context.resourceLines.length,
 								type: resource,
+								disposedType: null,
 								callsign: null,
 								status: 'not disposed',
 							});
@@ -65,9 +85,22 @@ export const scene = createMachine(
 						context.resourceLines.push({
 							index: context.resourceLines.length,
 							type: resource,
+							disposedType: null,
 							callsign: null,
 							status: 'not disposed',
 						});
+					}),
+				});
+			},
+			disposeResource: ({ context, event }) => {
+				const { resourceLineIndex, type, callsign } = event.params;
+				console.log(resourceLineIndex, type);
+				assign({
+					resourceLines: (context.resourceLines[resourceLineIndex] = {
+						...context.resourceLines[resourceLineIndex],
+						callsign,
+						disposedType: type,
+						status: 'disposed',
 					}),
 				});
 			},

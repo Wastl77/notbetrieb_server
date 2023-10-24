@@ -31,6 +31,7 @@ export type Scene = CreateSceneMachineInput & {
 	resourceLines: {
 		index: number;
 		type: string;
+		disposedType: string | null;
 		callsign: string | null;
 		status:
 			| 'not disposed'
