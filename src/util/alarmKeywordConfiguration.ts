@@ -22,6 +22,7 @@ export const alarmKeywordConfiguration: Record<string, KeywordConfiguration> = {
 			'rtw',
 		],
 	},
+	R2: { type: 'alarmkeyword', units: ['rtw', 'nef'] },
 	'Wohn.': { type: 'addition', units: ['gw-mess', 'rtw'] },
 	'WohnY.': { type: 'addition', units: ['rtw', 'nef', 'olrd'] },
 	Keller: { type: 'addition', units: ['gw-mess', 'ab-slm'] },

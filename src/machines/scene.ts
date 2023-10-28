@@ -1,4 +1,4 @@
-import { createMachine, assign } from 'xstate';
+import { createMachine, assign, raise } from 'xstate';
 import { upgradeAlarmkeyword } from '../util/upgradeAlarmkeyword.js';
 import { differentiateResources } from '../util/differentiateResources.js';
 import { CreateSceneMachineInput, Scene } from '../../types.js';
@@ -13,8 +13,10 @@ export const scene = createMachine(
 					| 'addUpgradeResources'
 					| 'updateAlarmKeyword'
 					| 'disposeResource'
-					| 'addInitialResources';
+					| 'addInitialResources'
+					| 'setAlarmedStatus';
 			};
+			guards: { type: 'isAllResourcesAlarmed' };
 			// events:
 			// 	| {
 			// 			type: 'UPGRADE-ALARMKEYWORD';
@@ -42,8 +44,23 @@ export const scene = createMachine(
 			open: {
 				entry: ['addInitialResources'],
 				initial: 'waiting',
+				on: {
+					'CHECK-SCENE-ALARMED': {
+						guard: 'isAllResourcesAlarmed',
+						target: '.alarmed',
+					},
+				},
 				states: {
-					waiting: {},
+					waiting: {
+						on: {
+							'RESOURCE-ALARMED': {
+								actions: [
+									'setAlarmedStatus',
+									raise({ type: 'CHECK-SCENE-ALARMED' }),
+								],
+							},
+						},
+					},
 					alarmed: {},
 				},
 			},
@@ -103,6 +120,21 @@ export const scene = createMachine(
 						status: 'disposed',
 					}),
 				});
+			},
+			setAlarmedStatus: ({ context, event }) => {
+				const { resourceLineIndex } = event.params;
+				console.log('setAlarmedStatus action drinnen');
+				assign({
+					resourceLines: (context.resourceLines[resourceLineIndex] = {
+						...context.resourceLines[resourceLineIndex],
+						status: 'alarmed',
+					}),
+				});
+			},
+		},
+		guards: {
+			isAllResourcesAlarmed: ({ context }) => {
+				return context.resourceLines.every((line) => line.status === 'alarmed');
 			},
 		},
 	}

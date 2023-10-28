@@ -33,8 +33,9 @@ router.post('/:sceneId', (req, res) => {
 router.get('/', (req, res) => {
 	const snapshot = rootActor.getSnapshot();
 	Object.keys(snapshot.children).forEach((child) => {
-		console.log(snapshot.children[child].getSnapshot().context);
+		console.log(snapshot.children[child].getSnapshot().context); //! hier den state loggen und gucken ob in R2(Qt) gegangen wird
 	});
+	console.log(snapshot.children['sceneNumber1'].getSnapshot().value);
 	res.send('Ok');
 });
 // dev function end

@@ -20,7 +20,7 @@ export type CreateSceneInput = {
 		district?: string;
 	};
 	alarmKeyword: string;
-	sceneNumber?: number; //TODO create input type for the machine
+	sceneNumber?: number;
 };
 
 export type CreateSceneMachineInput = CreateSceneInput & {
@@ -36,6 +36,7 @@ export type Scene = CreateSceneMachineInput & {
 		status:
 			| 'not disposed'
 			| 'disposed'
+			| 'alarmed'
 			| 'cancelled'
 			| 'not neccessary'
 			| 'finished';
