@@ -14,7 +14,8 @@ export const scene = createMachine(
 					| 'updateAlarmKeyword'
 					| 'disposeResource'
 					| 'addInitialResources'
-					| 'setAlarmedStatus';
+					| 'setAlarmedStatus'
+					| 'addResourceManual';
 			};
 			guards: { type: 'isAllResourcesAlarmed' };
 			// events:
@@ -48,6 +49,9 @@ export const scene = createMachine(
 					'CHECK-SCENE-ALARMED': {
 						guard: 'isAllResourcesAlarmed',
 						target: '.alarmed',
+					},
+					'ADD-RESOURCE-MANUAL': {
+						actions: ['addResourceManual'],
 					},
 				},
 				states: {
@@ -108,6 +112,17 @@ export const scene = createMachine(
 							callsign: null,
 							status: 'not disposed',
 						});
+					}),
+				});
+			},
+			addResourceManual: ({ context, event }) => {
+				assign({
+					resourceLines: context.resourceLines.push({
+						index: context.resourceLines.length,
+						type: event.params.type,
+						disposedType: event.params.type,
+						callsign: event.params.callsign,
+						status: 'disposed',
 					}),
 				});
 			},

@@ -16,7 +16,7 @@ router.post('/', (req, res) => {
 	res.send('Ok');
 });
 
-router.post('/:sceneId', (req, res) => {
+router.post('/:sceneId/UPGRADE-ALARMKEYWORD', (req, res) => {
 	// '/:sceneID/UPGRADE-ALARMKEYWORD'
 	//! so umschreiben, dass bei nachalarm auch adresse geupdatat werden kann
 	const newKeyword = req.query.newKeyword as unknown as string;
@@ -24,6 +24,17 @@ router.post('/:sceneId', (req, res) => {
 	rootActor.send({
 		type: 'UPGRADE-ALARMKEYWORD',
 		params: { sceneId, newKeyword },
+	});
+	res.send('Ok');
+});
+
+router.post('/:sceneId/ADD-RESOURCE-MANUAL', (req, res) => {
+	const callsign = req.query.callsign as unknown as string;
+	const type = req.query.type as unknown as string;
+	const sceneId = +req.params.sceneId;
+	rootActor.send({
+		type: 'ADD-RESOURCE-MANUAL',
+		params: { sceneId, callsign, type },
 	});
 	res.send('Ok');
 });

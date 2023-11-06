@@ -43,6 +43,10 @@ export const notbetriebRootMachine = createMachine(
 				| {
 						type: 'UPGRADE-ALARMKEYWORD';
 						params: { sceneId: number; newKeyword: string };
+				  }
+				| {
+						type: 'ADD-RESOURCE-MANUAL';
+						params: { sceneId: number; callsign: string; type: string };
 				  };
 			context: {
 				isSession: boolean;
@@ -159,6 +163,23 @@ export const notbetriebRootMachine = createMachine(
 									return {
 										type: 'UPGRADE-ALARMKEYWORD',
 										params: { newKeyword: event.params.newKeyword },
+									};
+								}
+							),
+						],
+					},
+					'ADD-RESOURCE-MANUAL': {
+						actions: [
+							sendTo(
+								({ event, system }) =>
+									system.get(`sceneNumber${event.params.sceneId}`),
+								({ event }) => {
+									return {
+										type: 'ADD-RESOURCE-MANUAL',
+										params: {
+											callsign: event.params.callsign,
+											type: event.params.type,
+										},
 									};
 								}
 							),
