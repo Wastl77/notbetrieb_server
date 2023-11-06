@@ -5,10 +5,11 @@ import { createActor, fromPromise, ActorRefFrom } from 'xstate';
 
 let rootActor: ActorRefFrom<typeof notbetriebRootMachine>;
 
-beforeEach(async () => {
+beforeEach(() => {
 	const resources = [
 		{ callsign: '1183-1', type: 'rtw' },
-		{ callsign: '1182-2', type: 'nef' },
+		{ callsign: '1184-1', type: 'rtw' },
+		{ callsign: '1182-1', type: 'nef' },
 	];
 
 	const notbetriebRootMachineTest = notbetriebRootMachine.provide({
@@ -64,7 +65,7 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
 			params: {
-				callsign: '1182-2',
+				callsign: '1182-1',
 				eventType: 'DISPOSE-RESOURCE',
 				params: {
 					sceneNumber: '1',
@@ -85,7 +86,90 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
 			params: {
-				callsign: '1182-2',
+				callsign: '1182-1',
+				eventType: 'SET-STATUS-QT',
+				params: {},
+			},
+		});
+	}));
+
+it('adds a resource correctly when resource manually added', async () =>
+	new Promise((done) => {
+		const scene = {
+			address: {
+				street: 'Mainzer Landstraße 25',
+			},
+			alarmKeyword: 'R2',
+		};
+
+		const initialResources = generateResources(scene.alarmKeyword);
+		rootActor.send({
+			type: 'CREATE-SCENE',
+			params: { ...scene, initialResources },
+		});
+
+		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
+			if (state.matches({ open: 'alarmed' })) {
+				expect(state.value).toEqual({ open: 'alarmed' });
+				done(null);
+			}
+		});
+
+		rootActor.send({
+			type: 'RESOURCE-EVENT',
+			params: {
+				callsign: '1183-1',
+				eventType: 'DISPOSE-RESOURCE',
+				params: {
+					sceneNumber: '1',
+					resourceLineIndex: '0',
+				},
+			},
+		});
+
+		rootActor.send({
+			type: 'RESOURCE-EVENT',
+			params: {
+				callsign: '1182-1',
+				eventType: 'DISPOSE-RESOURCE',
+				params: {
+					sceneNumber: '1',
+					resourceLineIndex: '1',
+				},
+			},
+		});
+
+		rootActor.send({
+			type: 'ADD-RESOURCE-MANUAL',
+			params: {
+				callsign: '1184-1',
+				sceneId: 1,
+				type: 'rtw',
+			},
+		});
+
+		rootActor.send({
+			type: 'RESOURCE-EVENT',
+			params: {
+				callsign: '1183-1',
+				eventType: 'SET-STATUS-QT',
+				params: {},
+			},
+		});
+
+		rootActor.send({
+			type: 'RESOURCE-EVENT',
+			params: {
+				callsign: '1182-1',
+				eventType: 'SET-STATUS-QT',
+				params: {},
+			},
+		});
+
+		rootActor.send({
+			type: 'RESOURCE-EVENT',
+			params: {
+				callsign: '1184-1',
 				eventType: 'SET-STATUS-QT',
 				params: {},
 			},

@@ -1,4 +1,4 @@
-import { createMachine, assign, raise } from 'xstate';
+import { createMachine, assign, raise, sendTo } from 'xstate';
 import { upgradeAlarmkeyword } from '../util/upgradeAlarmkeyword.js';
 import { differentiateResources } from '../util/differentiateResources.js';
 import { CreateSceneMachineInput, Scene } from '../../types.js';
@@ -15,6 +15,7 @@ export const scene = createMachine(
 					| 'disposeResource'
 					| 'addInitialResources'
 					| 'setAlarmedStatus'
+					| 'setResourceDisposed'
 					| 'addResourceManual';
 			};
 			guards: { type: 'isAllResourcesAlarmed' };
@@ -46,12 +47,19 @@ export const scene = createMachine(
 				entry: ['addInitialResources'],
 				initial: 'waiting',
 				on: {
-					'CHECK-SCENE-ALARMED': {
-						guard: 'isAllResourcesAlarmed',
-						target: '.alarmed',
-					},
+					'CHECK-SCENE-ALARMED': [
+						{
+							guard: 'isAllResourcesAlarmed',
+							target: '.alarmed',
+						},
+						{ target: '.waiting' },
+					],
 					'ADD-RESOURCE-MANUAL': {
-						actions: ['addResourceManual'],
+						actions: [
+							'addResourceManual',
+							'setResourceDisposed',
+							raise({ type: 'CHECK-SCENE-ALARMED' }),
+						],
 					},
 				},
 				states: {
@@ -120,9 +128,9 @@ export const scene = createMachine(
 					resourceLines: context.resourceLines.push({
 						index: context.resourceLines.length,
 						type: event.params.type,
-						disposedType: event.params.type,
-						callsign: event.params.callsign,
-						status: 'disposed',
+						disposedType: null,
+						callsign: null,
+						status: 'not disposed',
 					}),
 				});
 			},
@@ -146,10 +154,22 @@ export const scene = createMachine(
 					}),
 				});
 			},
+			setResourceDisposed: sendTo(
+				({ event, system }) => system.get(event.params.callsign),
+				({ context }) => {
+					return {
+						type: 'DISPOSE-RESOURCE',
+						params: {
+							sceneNumber: context.sceneNumber,
+							resourceLineIndex: context.resourceLines.length - 1,
+						},
+					};
+				}
+			),
 		},
 		guards: {
 			isAllResourcesAlarmed: ({ context }) => {
-				return context.resourceLines.every((line) => line.status === 'alarmed');
+				return context.resourceLines.every((line) => line.status === 'alarmed'); //! not necessary und finished noch dabei
 			},
 		},
 	}
