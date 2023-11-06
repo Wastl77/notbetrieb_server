@@ -19,7 +19,6 @@ router.post('/', (req, res) => {
 router.post('/:sceneId', (req, res) => {
 	// '/:sceneID/UPGRADE-ALARMKEYWORD'
 	//! so umschreiben, dass bei nachalarm auch adresse geupdatat werden kann
-	console.log(req.params.sceneId);
 	const newKeyword = req.query.newKeyword as unknown as string;
 	const sceneId = +req.params.sceneId;
 	rootActor.send({

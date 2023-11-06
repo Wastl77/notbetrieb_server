@@ -123,7 +123,6 @@ export const notbetriebRootMachine = createMachine(
 									};
 								}
 							),
-							() => console.log('resource event triggered'),
 						],
 					},
 					'CREATE-SCENE': {

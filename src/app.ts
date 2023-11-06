@@ -77,5 +77,14 @@ export const initializeApp = async (sessionName: string | undefined) => {
 	// }, 12000);
 
 	// startPrisma();
+
+	rootActor.subscribe((state: any) => {
+		if (state.matches('ready')) {
+			// expect(state.value).toEqual('ready');
+			// done(null);
+			const childs = rootActor.getSnapshot().children['sceneNumber1'];
+			console.log(childs);
+		}
+	});
 	console.log('App initialized');
 };

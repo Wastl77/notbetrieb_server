@@ -57,6 +57,8 @@ export const scene = createMachine(
 								actions: [
 									'setAlarmedStatus',
 									raise({ type: 'CHECK-SCENE-ALARMED' }),
+									// möglich, getSnapshot in machine aufzurufen?
+									// test schreiben, events nicht über REST, sondern sendTo oder send
 								],
 							},
 						},
@@ -111,7 +113,6 @@ export const scene = createMachine(
 			},
 			disposeResource: ({ context, event }) => {
 				const { resourceLineIndex, type, callsign } = event.params;
-				console.log(resourceLineIndex, type);
 				assign({
 					resourceLines: (context.resourceLines[resourceLineIndex] = {
 						...context.resourceLines[resourceLineIndex],
@@ -123,7 +124,6 @@ export const scene = createMachine(
 			},
 			setAlarmedStatus: ({ context, event }) => {
 				const { resourceLineIndex } = event.params;
-				console.log('setAlarmedStatus action drinnen');
 				assign({
 					resourceLines: (context.resourceLines[resourceLineIndex] = {
 						...context.resourceLines[resourceLineIndex],
