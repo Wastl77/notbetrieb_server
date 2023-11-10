@@ -28,20 +28,24 @@ beforeEach(() => {
 	return () => rootActor.stop();
 });
 
+const sceneFlow = () => {
+	const scene = {
+		address: {
+			street: 'Mainzer Landstraße 25',
+		},
+		alarmKeyword: 'R2',
+	};
+
+	const initialResources = generateResources(scene.alarmKeyword);
+	rootActor.send({
+		type: 'CREATE-SCENE',
+		params: { ...scene, initialResources },
+	});
+};
+
 it('should go from state waiting to state alarmed when all disposed resources are alarmed', async () =>
 	new Promise((done) => {
-		const scene = {
-			address: {
-				street: 'Mainzer Landstraße 25',
-			},
-			alarmKeyword: 'R2',
-		};
-
-		const initialResources = generateResources(scene.alarmKeyword);
-		rootActor.send({
-			type: 'CREATE-SCENE',
-			params: { ...scene, initialResources },
-		});
+		sceneFlow();
 
 		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
 			if (state.matches({ open: 'alarmed' })) {
@@ -95,18 +99,7 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 
 it('adds a resource correctly when resource manually added', async () =>
 	new Promise((done) => {
-		const scene = {
-			address: {
-				street: 'Mainzer Landstraße 25',
-			},
-			alarmKeyword: 'R2',
-		};
-
-		const initialResources = generateResources(scene.alarmKeyword);
-		rootActor.send({
-			type: 'CREATE-SCENE',
-			params: { ...scene, initialResources },
-		});
+		sceneFlow();
 
 		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
 			if (state.matches({ open: 'alarmed' })) {

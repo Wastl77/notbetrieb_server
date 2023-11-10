@@ -23,10 +23,8 @@ const prismaInitialDb = new PrismaClient({
 
 export const notbetriebRootMachine = createMachine(
 	{
-		/** @xstate-layout N4IgpgJg5mDOIC5QDkD2AXARmdAnAlmJgAQBKqGAdAJIB2+6+AhgDbGzpPpgDEAYgFEAKgGEAEgFoAygFURIgVKkBtAAwBdRKAAOqWA3ypaWkAA9EAJlUA2SgFZVAdgAcF6wGZnzgIzOb1gBoQAE9Eb1UAFkoIgE446wsIxxjrB1ULAF8soNpUCDgTNCwcAiIyCnQTXX1GIxNzBAlAkMQm7JAi7DxCEnIqOgNWdk5uKr0DOqQzRAiLINCEH2i4mLtHdztvOxjHdfbOkp7yqlhtJgB3WmJcOFQAV1wAYwKp6onjKYb3VcoYmwsYt53BZnHF3I55oglml0rNnBFrK4gVkskA */
 		types: {} as {
 			//type actors
-			input: { resources: Prisma.ResourceCreateManyInput[] }; // input trotzdem nicht strongly typed
 			events:
 				| {
 						type: 'RESOURCE-EVENT';

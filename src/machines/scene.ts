@@ -34,14 +34,14 @@ export const scene = createMachine(
 			resourceLines: [],
 		}),
 		initial: 'open',
-		on: {
-			'UPGRADE-ALARMKEYWORD': {
-				actions: ['addUpgradeResources', 'updateAlarmKeyword'], //!updateAlarmkeyword muss noch gemacht werden
-			},
-			'DISPOSE-RESOURCE': {
-				actions: ['disposeResource'],
-			},
-		},
+		// on: {
+		// 	'UPGRADE-ALARMKEYWORD': {
+		// 		actions: ['addUpgradeResources', 'updateAlarmKeyword'],
+		// 	},
+		// 	'DISPOSE-RESOURCE': {
+		// 		actions: ['disposeResource'],
+		// 	},
+		// },
 		states: {
 			open: {
 				entry: ['addInitialResources'],
@@ -60,6 +60,12 @@ export const scene = createMachine(
 							'setResourceDisposed',
 							raise({ type: 'CHECK-SCENE-ALARMED' }),
 						],
+					},
+					'UPGRADE-ALARMKEYWORD': {
+						actions: ['addUpgradeResources', 'updateAlarmKeyword'], //!updateAlarmkeyword muss noch gemacht werden
+					},
+					'DISPOSE-RESOURCE': {
+						actions: ['disposeResource'],
 					},
 				},
 				states: {
