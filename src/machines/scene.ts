@@ -76,7 +76,6 @@ export const scene = createMachine(
 									'setAlarmedStatus',
 									raise({ type: 'CHECK-SCENE-ALARMED' }),
 									// möglich, getSnapshot in machine aufzurufen?
-									// test schreiben, events nicht über REST, sondern sendTo oder send
 								],
 							},
 						},

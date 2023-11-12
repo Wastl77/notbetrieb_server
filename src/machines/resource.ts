@@ -5,7 +5,18 @@ export const resource = createMachine(
 		types: {} as {
 			//! Events mit verschiedenen properties fragen bei discord
 			events: {
-				type: 'DISPOSE-RESOURCE' | 'SET-STATUS-QT' | 'RESOURCE-ALARMED';
+				type:
+					| 'DISPOSE-RESOURCE'
+					| 'SET-STATUS-QT'
+					| 'SET-STATUS-1'
+					| 'SET-STATUS-2'
+					| 'SET-STATUS-3'
+					| 'SET-STATUS-4'
+					| 'SET-STATUS-7'
+					| 'SET-STATUS-8'
+					| 'SET-STATUS-Ü1'
+					| 'SET-STATUS-Ü2'
+					| 'SET-STATUS-EA';
 				params: {
 					sceneNumber: string;
 					resourceLineIndex: string;
@@ -41,6 +52,25 @@ export const resource = createMachine(
 							'DISPOSE-RESOURCE': {
 								target: '#resource.reserved.R2',
 							},
+							'SET-STATUS-1': {
+								target: 'D1',
+							},
+							'SET-STATUS-Ü2': {
+								target: '#resource.Ü-Pool.Ü2',
+							},
+						},
+					},
+					D1: {
+						on: {
+							'DISPOSE-RESOURCE': {
+								target: '#resource.reserved.R1',
+							},
+							'SET-STATUS-2': {
+								target: 'D2',
+							},
+							'SET-STATUS-Ü1': {
+								target: '#resource.Ü-Pool.Ü1',
+							},
 						},
 					},
 				},
@@ -49,10 +79,118 @@ export const resource = createMachine(
 				initial: 'R2',
 				states: {
 					R2: {
-						entry: ['setActualScene', 'resourceDisposed'],
-						on: { 'SET-STATUS-QT': { target: 'R2(Qt)' } },
+						entry: [
+							{
+								type: 'setActualScene',
+							},
+							{
+								type: 'resourceDisposed',
+							},
+						],
+						on: {
+							'SET-STATUS-QT': {
+								target: 'R2(Qt)',
+							},
+						},
 					},
-					'R2(Qt)': { entry: ['sendResourceAlarmed'] },
+					'R2(Qt)': {
+						entry: {
+							type: 'sendResourceAlarmed',
+						},
+						on: {
+							'SET-STATUS-3': {
+								target: 'R3',
+							},
+						},
+					},
+					R3: {
+						on: {
+							'SET-STATUS-4': {
+								target: 'R4',
+							},
+							'SET-STATUS-EA': {
+								target: 'EA',
+							},
+						},
+					},
+					R4: {
+						on: {
+							'SET-STATUS-7': {
+								target: 'R7',
+							},
+							'SET-STATUS-EA': {
+								target: 'EA',
+							},
+						},
+					},
+					EA: {
+						on: {
+							'SET-STATUS-1': {
+								target: '#resource.available.D1',
+							},
+						},
+					},
+					R7: {
+						on: {
+							'SET-STATUS-8': {
+								target: 'R8',
+							},
+						},
+					},
+					R8: {
+						on: {
+							'SET-STATUS-Ü1': {
+								target: '#resource.Ü-Pool.Ü1',
+							},
+							'SET-STATUS-1': {
+								target: '#resource.available.D1',
+							},
+						},
+					},
+					R1: {
+						entry: [
+							{
+								type: 'setActualScene',
+							},
+							{
+								type: 'resourceDisposed',
+							},
+						],
+						on: {
+							'SET-STATUS-QT': {
+								target: 'R1(Qt)',
+							},
+						},
+					},
+					'R1(Qt)': {
+						entry: {
+							type: 'sendResourceAlarmed',
+						},
+						on: {
+							'SET-STATUS-3': {
+								target: 'R3',
+							},
+						},
+					},
+				},
+			},
+			'Ü-Pool': {
+				initial: 'Ü2',
+				states: {
+					Ü2: {
+						on: {
+							'SET-STATUS-2': {
+								target: '#resource.available.D2',
+							},
+						},
+					},
+					Ü1: {
+						on: {
+							'SET-STATUS-1': {
+								target: '#resource.available.D1',
+							},
+						},
+					},
 				},
 			},
 		},

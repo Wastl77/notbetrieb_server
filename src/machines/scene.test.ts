@@ -10,6 +10,7 @@ beforeEach(() => {
 		{ callsign: '1183-1', type: 'rtw' },
 		{ callsign: '1184-1', type: 'rtw' },
 		{ callsign: '1182-1', type: 'nef' },
+		{ callsign: '1010-1', type: 'c-di' },
 	];
 
 	const notbetriebRootMachineTest = notbetriebRootMachine.provide({
@@ -165,6 +166,47 @@ it('adds a resource correctly when resource manually added', async () =>
 				callsign: '1184-1',
 				eventType: 'SET-STATUS-QT',
 				params: {},
+			},
+		});
+	}));
+
+it('should add the resource lines and correct types when alarm keyword gets updated ', async () =>
+	new Promise((done) => {
+		const scene = {
+			address: {
+				street: 'Mainzer Landstraße 25',
+			},
+			alarmKeyword: 'F2[Wohn.]',
+		};
+
+		const initialResources = generateResources(scene.alarmKeyword);
+		rootActor.send({
+			type: 'CREATE-SCENE',
+			params: { ...scene, initialResources },
+		});
+
+		rootActor.send({
+			type: 'UPGRADE-ALARMKEYWORD',
+			params: { sceneId: 1, newKeyword: 'F3[WohnY.]' },
+		});
+
+		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
+			if (state.matches({ open: 'waiting' })) {
+				expect(state.context.resourceLines).toHaveLength(12);
+				expect(state.context.resourceLines[0].callsign).toEqual('1010-1');
+				done(null);
+			}
+		});
+
+		rootActor.send({
+			type: 'RESOURCE-EVENT',
+			params: {
+				callsign: '1010-1',
+				eventType: 'DISPOSE-RESOURCE',
+				params: {
+					sceneNumber: '1',
+					resourceLineIndex: '0',
+				},
 			},
 		});
 	}));

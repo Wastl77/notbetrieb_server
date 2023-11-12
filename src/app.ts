@@ -80,10 +80,14 @@ export const initializeApp = async (sessionName: string | undefined) => {
 
 	// rootActor.subscribe((state: any) => {
 	// 	if (state.matches('ready')) {
-	// expect(state.value).toEqual('ready');
-	// done(null);
-	// 		const childs = rootActor.getSnapshot().children['sceneNumber1'];
-	// 		console.log(childs);
+	// 		if (rootActor.getSnapshot().children['sceneNumber1'] !== undefined) {
+	// 			const sceneChild = rootActor
+	// 				.getSnapshot()
+	// 				.children['sceneNumber1'].getSnapshot();
+	// 			console.log(sceneChild.state);
+	// 		}
+	// 		const child = rootActor.getSnapshot().children['1183-1'].getSnapshot();
+	// 		console.log(child.context);
 	// 	}
 	// });
 	console.log('App initialized');
