@@ -1,9 +1,10 @@
-import { createMachine, assign, raise, sendTo } from 'xstate';
+import { createMachine, assign, raise, sendTo, choose } from 'xstate';
 import { upgradeAlarmkeyword } from '../util/upgradeAlarmkeyword.js';
 import { differentiateResources } from '../util/differentiateResources.js';
 import { CreateSceneMachineInput, Scene } from '../../types.js';
 
 export const scene = createMachine(
+	// testen ob upgrade alarmkeyword->raise checkscenealarmed geht, disposeResource->raise checkSceneDisposed?
 	{
 		types: {} as {
 			context: Scene;
@@ -16,9 +17,17 @@ export const scene = createMachine(
 					| 'addInitialResources'
 					| 'setAlarmedStatus'
 					| 'setResourceDisposed'
-					| 'addResourceManual';
+					| 'addResourceManual'
+					| 'setResourceLeftSceneStatus'
+					| 'setResourceOnSceneStatus';
 			};
-			guards: { type: 'isAllResourcesAlarmed' };
+			guards: {
+				type:
+					| 'allResourcesAlarmed'
+					| 'allResourcesDisposed'
+					| 'allResourcesLeftScene'
+					| 'resourceLineDisposable';
+			};
 			// events:
 			// 	| {
 			// 			type: 'UPGRADE-ALARMKEYWORD';
@@ -44,50 +53,136 @@ export const scene = createMachine(
 		// },
 		states: {
 			open: {
-				entry: ['addInitialResources'],
-				initial: 'waiting',
+				entry: {
+					type: 'addInitialResources',
+				},
 				on: {
-					'CHECK-SCENE-ALARMED': [
-						{
-							guard: 'isAllResourcesAlarmed',
-							target: '.alarmed',
-						},
-						{ target: '.waiting' },
-					],
 					'ADD-RESOURCE-MANUAL': {
 						actions: [
-							'addResourceManual',
-							'setResourceDisposed',
+							{
+								type: 'addResourceManual',
+							},
+							{
+								type: 'setResourceDisposed',
+							},
 							raise({ type: 'CHECK-SCENE-ALARMED' }),
+							raise({ type: 'CHECK-SCENE-DISPOSED' }),
 						],
 					},
 					'UPGRADE-ALARMKEYWORD': {
-						actions: ['addUpgradeResources', 'updateAlarmKeyword'], //!updateAlarmkeyword muss noch gemacht werden
+						actions: [
+							{
+								type: 'addUpgradeResources',
+							},
+							{
+								type: 'updateAlarmKeyword', //! muss noch gemacht werden
+							},
+							raise({ type: 'CHECK-SCENE-ALARMED' }),
+							raise({ type: 'CHECK-SCENE-DISPOSED' }),
+						],
 					},
 					'DISPOSE-RESOURCE': {
-						actions: ['disposeResource'],
+						actions: choose([
+							{
+								guard: 'resourceLineDisposable', //! der check muss in resource machine stattfinden, da bei dispose event schon scenenumber und index gesetzt werden
+								actions: [
+									{ type: 'disposeResource' },
+									raise({ type: 'CHECK-SCENE-DISPOSED' }),
+								],
+							},
+						]),
+					},
+					'RESOURCE-LEFT-SCENE': {
+						actions: [
+							{ type: 'setResourceLeftSceneStatus' },
+							raise({ type: 'CHECK-SCENE-LEFT' }),
+						],
 					},
 				},
 				states: {
-					waiting: {
-						on: {
-							'RESOURCE-ALARMED': {
-								actions: [
-									'setAlarmedStatus',
-									raise({ type: 'CHECK-SCENE-ALARMED' }),
-									// möglich, getSnapshot in machine aufzurufen?
-								],
+					waitingState: {
+						initial: 'waiting',
+						states: {
+							waiting: {
+								on: {
+									'RESOURCE-ALARMED': {
+										target: 'waiting',
+										actions: [
+											{
+												type: 'setAlarmedStatus',
+											},
+											raise({ type: 'CHECK-SCENE-ALARMED' }),
+										],
+									},
+								},
 							},
+							alarmed: {},
+						},
+						on: {
+							'CHECK-SCENE-ALARMED': [
+								{
+									target: '.alarmed', // wie hier mehrere targets ansprechen, nämlich wieder in sceneState.disposing, dann upgradealarmkeyword, evtl. über websocket oder request.body
+									guard: 'allResourcesAlarmed',
+								},
+								{
+									target: '.waiting',
+								},
+							],
 						},
 					},
-					alarmed: {},
+					sceneState: {
+						initial: 'disposing',
+						states: {
+							disposing: {},
+							disposed: {
+								on: {
+									'RESOURCE-IN-STATUS-3': {
+										target: 'onApproach',
+									},
+								},
+							},
+							onApproach: {},
+							onScene: {
+								on: {
+									'CHECK-SCENE-LEFT': [
+										{
+											target: 'noResourcesOnScene',
+											guard: 'allResourcesLeftScene',
+										},
+										{
+											target: 'onScene',
+										},
+									],
+								},
+							},
+							noResourcesOnScene: {},
+						},
+						on: {
+							'RESOURCE-IN-STATUS-4': {
+								actions: { type: 'setResourceOnSceneStatus' },
+								target: '.onScene',
+							},
+							'CHECK-SCENE-DISPOSED': [
+								{
+									target: '.disposed',
+									guard: 'allResourcesDisposed',
+								},
+								{
+									target: '.disposing',
+								},
+							],
+						},
+					},
 				},
+				type: 'parallel',
 			},
+			finished: {},
 		},
 	},
 	{
 		actions: {
-			addInitialResources: ({ context }) =>
+			addInitialResources: ({ context }) => {
+				console.log('add Initial Resources');
 				assign({
 					resourceLines: context.initialResources.forEach(
 						(resource: string) => {
@@ -100,7 +195,8 @@ export const scene = createMachine(
 							});
 						}
 					),
-				}),
+				});
+			},
 			addUpgradeResources: ({ context, event }) => {
 				const totalResources = upgradeAlarmkeyword(
 					context.alarmKeyword,
@@ -129,6 +225,7 @@ export const scene = createMachine(
 				});
 			},
 			addResourceManual: ({ context, event }) => {
+				console.log('im add manual action');
 				assign({
 					resourceLines: context.resourceLines.push({
 						index: context.resourceLines.length,
@@ -171,10 +268,68 @@ export const scene = createMachine(
 					};
 				}
 			),
+			setResourceLeftSceneStatus: ({ context, event }) => {
+				const { resourceLineIndex } = event.params;
+				assign({
+					resourceLines: (context.resourceLines[resourceLineIndex] = {
+						...context.resourceLines[resourceLineIndex],
+						status: 'left scene',
+					}),
+				});
+			},
+			setResourceOnSceneStatus: ({ context, event }) => {
+				const { resourceLineIndex } = event.params;
+				console.log(resourceLineIndex);
+				assign({
+					resourceLines: (context.resourceLines[resourceLineIndex] = {
+						...context.resourceLines[resourceLineIndex],
+						status: 'on scene',
+					}),
+				});
+			},
 		},
 		guards: {
-			isAllResourcesAlarmed: ({ context }) => {
-				return context.resourceLines.every((line) => line.status === 'alarmed'); //! not necessary und finished noch dabei
+			allResourcesAlarmed: ({ context }) => {
+				return context.resourceLines.every(
+					(line) =>
+						line.status === 'alarmed' ||
+						line.status === 'not neccessary' ||
+						line.status === 'finished' ||
+						line.status === 'on scene' ||
+						line.status === 'left scene'
+				);
+			},
+			allResourcesDisposed: ({ context }) => {
+				return context.resourceLines.every(
+					(line) =>
+						line.status === 'alarmed' ||
+						line.status === 'not neccessary' ||
+						line.status === 'finished' ||
+						line.status === 'on scene' ||
+						line.status === 'disposed' ||
+						line.status === 'left scene'
+				);
+			},
+			allResourcesLeftScene: ({ context }) => {
+				return context.resourceLines.every(
+					(line) =>
+						line.status === 'left scene' ||
+						line.status === 'finished' ||
+						line.status === 'not neccessary'
+				);
+			},
+			resourceLineDisposable: ({ context, event }) => {
+				const { resourceLineIndex } = event.params;
+				const bool =
+					context.resourceLines[resourceLineIndex].status === 'not disposed' ||
+					context.resourceLines[resourceLineIndex].status === 'disposed' ||
+					context.resourceLines[resourceLineIndex].status === 'cancelled';
+				console.log('guard is: ', bool);
+				return (
+					context.resourceLines[resourceLineIndex].status === 'not disposed' ||
+					context.resourceLines[resourceLineIndex].status === 'disposed' ||
+					context.resourceLines[resourceLineIndex].status === 'cancelled'
+				);
 			},
 		},
 	}

@@ -37,9 +37,11 @@ export type Scene = CreateSceneMachineInput & {
 			| 'not disposed'
 			| 'disposed'
 			| 'alarmed'
+			| 'on scene'
+			| 'left scene'
+			| 'finished'
 			| 'cancelled'
-			| 'not neccessary'
-			| 'finished';
+			| 'not neccessary';
 		cancelledCallsign?: string;
 	}[];
 };

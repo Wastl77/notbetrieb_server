@@ -26,7 +26,10 @@ export const resource = createMachine(
 			actions:
 				| { type: 'resourceDisposed' }
 				| { type: 'setActualScene' }
-				| { type: 'sendResourceAlarmed' };
+				| { type: 'sendResourceAlarmed' }
+				| { type: 'sendResourceInStatus3' }
+				| { type: 'sendResourceInStatus4' }
+				| { type: 'sendResourceLeftScene' };
 			input: { resourceType: string; callsign: string };
 			context: {
 				resourceType: string;
@@ -104,6 +107,9 @@ export const resource = createMachine(
 						},
 					},
 					R3: {
+						entry: {
+							type: 'sendResourceInStatus3',
+						},
 						on: {
 							'SET-STATUS-4': {
 								target: 'R4',
@@ -114,6 +120,12 @@ export const resource = createMachine(
 						},
 					},
 					R4: {
+						entry: {
+							type: 'sendResourceInStatus4',
+						},
+						exit: {
+							type: 'sendResourceLeftScene',
+						},
 						on: {
 							'SET-STATUS-7': {
 								target: 'R7',
@@ -221,6 +233,39 @@ export const resource = createMachine(
 				({ context }) => {
 					return {
 						type: 'RESOURCE-ALARMED',
+						params: {
+							resourceLineIndex: context.resourceLineIndex,
+						},
+					};
+				}
+			),
+			sendResourceInStatus3: sendTo(
+				({ system, context }) =>
+					system.get(`sceneNumber${context.sceneNumber}`),
+				() => {
+					return {
+						type: 'RESOURCE-IN-STATUS-3',
+					};
+				}
+			),
+			sendResourceInStatus4: sendTo(
+				({ system, context }) =>
+					system.get(`sceneNumber${context.sceneNumber}`),
+				({ context }) => {
+					return {
+						type: 'RESOURCE-IN-STATUS-4',
+						params: {
+							resourceLineIndex: context.resourceLineIndex,
+						},
+					};
+				}
+			),
+			sendResourceLeftScene: sendTo(
+				({ system, context }) =>
+					system.get(`sceneNumber${context.sceneNumber}`),
+				({ context }) => {
+					return {
+						type: 'RESOURCE-LEFT-SCENE',
 						params: {
 							resourceLineIndex: context.resourceLineIndex,
 						},

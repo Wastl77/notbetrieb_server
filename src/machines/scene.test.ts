@@ -49,8 +49,14 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 		sceneFlow();
 
 		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
-			if (state.matches({ open: 'alarmed' })) {
-				expect(state.value).toEqual({ open: 'alarmed' });
+			if (
+				state.matches({
+					open: { waitingState: 'alarmed', sceneState: 'disposed' },
+				})
+			) {
+				expect(state.value).toEqual({
+					open: { waitingState: 'alarmed', sceneState: 'disposed' },
+				});
 				done(null);
 			}
 		});
@@ -103,8 +109,14 @@ it('adds a resource correctly when resource manually added', async () =>
 		sceneFlow();
 
 		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
-			if (state.matches({ open: 'alarmed' })) {
-				expect(state.value).toEqual({ open: 'alarmed' });
+			if (
+				state.matches({
+					open: { waitingState: 'alarmed', sceneState: 'disposed' },
+				})
+			) {
+				expect(state.value).toEqual({
+					open: { waitingState: 'alarmed', sceneState: 'disposed' },
+				});
 				done(null);
 			}
 		});
@@ -191,7 +203,11 @@ it('should add the resource lines and correct types when alarm keyword gets upda
 		});
 
 		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
-			if (state.matches({ open: 'waiting' })) {
+			if (
+				state.matches({
+					open: { waitingState: 'waiting', sceneState: 'disposing' },
+				})
+			) {
 				expect(state.context.resourceLines).toHaveLength(12);
 				expect(state.context.resourceLines[0].callsign).toEqual('1010-1');
 				done(null);
