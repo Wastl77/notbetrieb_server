@@ -29,7 +29,8 @@ export const resource = createMachine(
 				| { type: 'sendResourceAlarmed' }
 				| { type: 'sendResourceInStatus3' }
 				| { type: 'sendResourceInStatus4' }
-				| { type: 'sendResourceLeftScene' };
+				| { type: 'sendResourceLeftScene' }
+				| { type: 'sendResourceFinished' };
 			input: { resourceType: string; callsign: string };
 			context: {
 				resourceType: string;
@@ -75,6 +76,25 @@ export const resource = createMachine(
 								target: '#resource.Ü-Pool.Ü1',
 							},
 						},
+					},
+				},
+			},
+			availableOnReturn: {
+				initial: 'D1',
+				states: {
+					D1: {
+						on: {
+							'DISPOSE-RESOURCE': {
+								target: '#resource.reserved.R1',
+							},
+							'SET-STATUS-2': {
+								target: '#resource.available.D2',
+							},
+							'SET-STATUS-Ü1': {
+								target: '#resource.Ü-Pool.Ü1',
+							},
+						},
+						exit: { type: 'sendResourceFinished' },
 					},
 				},
 			},
@@ -133,12 +153,15 @@ export const resource = createMachine(
 							'SET-STATUS-EA': {
 								target: 'EA',
 							},
+							'SET-STATUS-1': {
+								target: '#resource.availableOnReturn.D1',
+							},
 						},
 					},
 					EA: {
 						on: {
 							'SET-STATUS-1': {
-								target: '#resource.available.D1',
+								target: '#resource.availableOnReturn.D1',
 							},
 						},
 					},
@@ -155,7 +178,7 @@ export const resource = createMachine(
 								target: '#resource.Ü-Pool.Ü1',
 							},
 							'SET-STATUS-1': {
-								target: '#resource.available.D1',
+								target: '#resource.availableOnReturn.D1',
 							},
 						},
 					},
@@ -266,6 +289,18 @@ export const resource = createMachine(
 				({ context }) => {
 					return {
 						type: 'RESOURCE-LEFT-SCENE',
+						params: {
+							resourceLineIndex: context.resourceLineIndex,
+						},
+					};
+				}
+			),
+			sendResourceFinished: sendTo(
+				({ system, context }) =>
+					system.get(`sceneNumber${context.sceneNumber}`),
+				({ context }) => {
+					return {
+						type: 'RESOURCE-FINISHED',
 						params: {
 							resourceLineIndex: context.resourceLineIndex,
 						},

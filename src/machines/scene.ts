@@ -19,13 +19,15 @@ export const scene = createMachine(
 					| 'setResourceDisposed'
 					| 'addResourceManual'
 					| 'setResourceLeftSceneStatus'
-					| 'setResourceOnSceneStatus';
+					| 'setResourceOnSceneStatus'
+					| 'setResourceFinishedStatus';
 			};
 			guards: {
 				type:
 					| 'allResourcesAlarmed'
 					| 'allResourcesDisposed'
 					| 'allResourcesLeftScene'
+					| 'allResourcesFinished'
 					| 'resourceLineDisposable';
 			};
 			// events:
@@ -42,6 +44,7 @@ export const scene = createMachine(
 			...input,
 			resourceLines: [],
 		}),
+		id: 'scene',
 		initial: 'open',
 		// on: {
 		// 	'UPGRADE-ALARMKEYWORD': {
@@ -96,6 +99,12 @@ export const scene = createMachine(
 						actions: [
 							{ type: 'setResourceLeftSceneStatus' },
 							raise({ type: 'CHECK-SCENE-LEFT' }),
+						],
+					},
+					'RESOURCE-FINISHED': {
+						actions: [
+							{ type: 'setResourceFinishedStatus' },
+							raise({ type: 'CHECK-SCENE-FINISHED' }),
 						],
 					},
 				},
@@ -155,7 +164,19 @@ export const scene = createMachine(
 									],
 								},
 							},
-							noResourcesOnScene: {},
+							noResourcesOnScene: {
+								on: {
+									'CHECK-SCENE-FINISHED': [
+										{
+											target: '#scene.finished',
+											guard: 'allResourcesFinished',
+										},
+										{
+											target: 'noResourcesOnScene',
+										},
+									],
+								},
+							},
 						},
 						on: {
 							'RESOURCE-IN-STATUS-4': {
@@ -277,6 +298,15 @@ export const scene = createMachine(
 					}),
 				});
 			},
+			setResourceFinishedStatus: ({ context, event }) => {
+				const { resourceLineIndex } = event.params;
+				assign({
+					resourceLines: (context.resourceLines[resourceLineIndex] = {
+						...context.resourceLines[resourceLineIndex],
+						status: 'finished',
+					}),
+				});
+			},
 			setResourceOnSceneStatus: ({ context, event }) => {
 				const { resourceLineIndex } = event.params;
 				console.log(resourceLineIndex);
@@ -316,6 +346,12 @@ export const scene = createMachine(
 						line.status === 'left scene' ||
 						line.status === 'finished' ||
 						line.status === 'not neccessary'
+				);
+			},
+			allResourcesFinished: ({ context }) => {
+				return context.resourceLines.every(
+					(line) =>
+						line.status === 'finished' || line.status === 'not neccessary'
 				);
 			},
 			resourceLineDisposable: ({ context, event }) => {
