@@ -1,4 +1,5 @@
 import { createMachine, sendTo, assign } from 'xstate';
+import { rootActor } from '../app.js';
 
 export const resource = createMachine(
 	{
@@ -7,6 +8,7 @@ export const resource = createMachine(
 			events: {
 				type:
 					| 'DISPOSE-RESOURCE'
+					| 'CANCEL-RESOURCE'
 					| 'SET-STATUS-QT'
 					| 'SET-STATUS-1'
 					| 'SET-STATUS-2'
@@ -26,6 +28,7 @@ export const resource = createMachine(
 			actions:
 				| { type: 'resourceDisposed' }
 				| { type: 'setActualScene' }
+				| { type: 'resetScene' }
 				| { type: 'sendResourceAlarmed' }
 				| { type: 'sendResourceInStatus3' }
 				| { type: 'sendResourceInStatus4' }
@@ -54,7 +57,8 @@ export const resource = createMachine(
 					D2: {
 						on: {
 							'DISPOSE-RESOURCE': {
-								target: '#resource.reserved.R2',
+								guard: 'isResourceLineDisposable',
+								target: '#resource.reserved.R2', //! hier guard?
 							},
 							'SET-STATUS-1': {
 								target: 'D1',
@@ -67,6 +71,7 @@ export const resource = createMachine(
 					D1: {
 						on: {
 							'DISPOSE-RESOURCE': {
+								guard: 'isResourceLineDisposable',
 								target: '#resource.reserved.R1',
 							},
 							'SET-STATUS-2': {
@@ -85,6 +90,7 @@ export const resource = createMachine(
 					D1: {
 						on: {
 							'DISPOSE-RESOURCE': {
+								guard: 'isResourceLineDisposable',
 								target: '#resource.reserved.R1',
 							},
 							'SET-STATUS-2': {
@@ -94,7 +100,7 @@ export const resource = createMachine(
 								target: '#resource.Ü-Pool.Ü1',
 							},
 						},
-						exit: { type: 'sendResourceFinished' },
+						exit: { type: 'sendResourceFinished' }, //! hier noch resetScene action einfügen
 					},
 				},
 			},
@@ -114,6 +120,10 @@ export const resource = createMachine(
 							'SET-STATUS-QT': {
 								target: 'R2(Qt)',
 							},
+							'CANCEL-RESOURCE': {
+								actions: { type: 'resetScene' },
+								target: '#resource.available.D2',
+							},
 						},
 					},
 					'R2(Qt)': {
@@ -123,6 +133,10 @@ export const resource = createMachine(
 						on: {
 							'SET-STATUS-3': {
 								target: 'R3',
+							},
+							'CANCEL-RESOURCE': {
+								actions: { type: 'resetScene' },
+								target: '#resource.available.D2',
 							},
 						},
 					},
@@ -195,6 +209,10 @@ export const resource = createMachine(
 							'SET-STATUS-QT': {
 								target: 'R1(Qt)',
 							},
+							'CANCEL-RESOURCE': {
+								actions: { type: 'resetScene' },
+								target: '#resource.available.D2',
+							},
 						},
 					},
 					'R1(Qt)': {
@@ -204,6 +222,10 @@ export const resource = createMachine(
 						on: {
 							'SET-STATUS-3': {
 								target: 'R3',
+							},
+							'CANCEL-RESOURCE': {
+								actions: { type: 'resetScene' },
+								target: '#resource.available.D2',
 							},
 						},
 					},
@@ -250,6 +272,10 @@ export const resource = createMachine(
 				sceneNumber: ({ event }) => event.params.sceneNumber,
 				resourceLineIndex: ({ event }) => event.params.resourceLineIndex,
 			}),
+			resetScene: assign({
+				sceneNumber: null,
+				resourceLineIndex: null,
+			}),
 			sendResourceAlarmed: sendTo(
 				({ system, context }) =>
 					system.get(`sceneNumber${context.sceneNumber}`),
@@ -265,9 +291,12 @@ export const resource = createMachine(
 			sendResourceInStatus3: sendTo(
 				({ system, context }) =>
 					system.get(`sceneNumber${context.sceneNumber}`),
-				() => {
+				({ context }) => {
 					return {
 						type: 'RESOURCE-IN-STATUS-3',
+						params: {
+							resourceLineIndex: context.resourceLineIndex,
+						},
 					};
 				}
 			),
@@ -307,6 +336,25 @@ export const resource = createMachine(
 					};
 				}
 			),
+		},
+		guards: {
+			isResourceLineDisposable: ({ event }) => {
+				const context: any = rootActor
+					.getSnapshot()
+					.children[
+						`sceneNumber${event.params.sceneNumber}`
+					].getSnapshot().context;
+				return (
+					context.resourceLines[event.params.resourceLineIndex].status ===
+						'not disposed' ||
+					context.resourceLines[event.params.resourceLineIndex].status ===
+						'disposed' ||
+					context.resourceLines[event.params.resourceLineIndex].status ===
+						'alarmed' ||
+					context.resourceLines[event.params.resourceLineIndex].status ===
+						'cancelled'
+				);
+			},
 		},
 	}
 );

@@ -1,4 +1,12 @@
-import { createMachine, assign, raise, sendTo, choose } from 'xstate';
+import {
+	createMachine,
+	assign,
+	raise,
+	sendTo,
+	choose,
+	pure,
+	AnyEventObject,
+} from 'xstate';
 import { upgradeAlarmkeyword } from '../util/upgradeAlarmkeyword.js';
 import { differentiateResources } from '../util/differentiateResources.js';
 import { CreateSceneMachineInput, Scene } from '../../types.js';
@@ -18,7 +26,9 @@ export const scene = createMachine(
 					| 'setAlarmedStatus'
 					| 'setResourceDisposed'
 					| 'addResourceManual'
+					| 'cancelResource'
 					| 'setResourceLeftSceneStatus'
+					| 'setResourceOnApproachStatus'
 					| 'setResourceOnSceneStatus'
 					| 'setResourceFinishedStatus';
 			};
@@ -27,8 +37,7 @@ export const scene = createMachine(
 					| 'allResourcesAlarmed'
 					| 'allResourcesDisposed'
 					| 'allResourcesLeftScene'
-					| 'allResourcesFinished'
-					| 'resourceLineDisposable';
+					| 'allResourcesFinished';
 			};
 			// events:
 			// 	| {
@@ -46,14 +55,6 @@ export const scene = createMachine(
 		}),
 		id: 'scene',
 		initial: 'open',
-		// on: {
-		// 	'UPGRADE-ALARMKEYWORD': {
-		// 		actions: ['addUpgradeResources', 'updateAlarmKeyword'],
-		// 	},
-		// 	'DISPOSE-RESOURCE': {
-		// 		actions: ['disposeResource'],
-		// 	},
-		// },
 		states: {
 			open: {
 				entry: {
@@ -69,7 +70,7 @@ export const scene = createMachine(
 								type: 'setResourceDisposed',
 							},
 							raise({ type: 'CHECK-SCENE-ALARMED' }),
-							raise({ type: 'CHECK-SCENE-DISPOSED' }),
+							raise({ type: 'CHECK-SCENE-DISPOSED' })+´
 						],
 					},
 					'UPGRADE-ALARMKEYWORD': {
@@ -85,15 +86,36 @@ export const scene = createMachine(
 						],
 					},
 					'DISPOSE-RESOURCE': {
-						actions: choose([
-							{
-								guard: 'resourceLineDisposable', //! der check muss in resource machine stattfinden, da bei dispose event schon scenenumber und index gesetzt werden
-								actions: [
-									{ type: 'disposeResource' },
-									raise({ type: 'CHECK-SCENE-DISPOSED' }),
-								],
-							},
-						]),
+						actions: pure(
+							({ context, event }: { context: any; event: AnyEventObject }) => {
+								if (
+									context.resourceLines[event.params.resourceLineIndex]
+										.status !== 'not disposed'
+								) {
+									console.log('im cancel if branch');
+									return [
+										'cancelResource',
+										'disposeResource',
+										raise({ type: 'CHECK-SCENE-DISPOSED' }),
+									];
+								} else if (
+									context.resourceLines[event.params.resourceLineIndex]
+										.status === 'not disposed' ||
+									context.resourceLines[event.params.resourceLineIndex]
+										.status === 'disposed' ||
+									context.resourceLines[event.params.resourceLineIndex]
+										.status === 'alarmed' ||
+									context.resourceLines[event.params.resourceLineIndex]
+										.status === 'cancelled'
+								) {
+									console.log('im nicht cancel if branch');
+									return [
+										'disposeResource',
+										raise({ type: 'CHECK-SCENE-DISPOSED' }),
+									];
+								}
+							}
+						),
 					},
 					'RESOURCE-LEFT-SCENE': {
 						actions: [
@@ -130,7 +152,7 @@ export const scene = createMachine(
 						on: {
 							'CHECK-SCENE-ALARMED': [
 								{
-									target: '.alarmed', // wie hier mehrere targets ansprechen, nämlich wieder in sceneState.disposing, dann upgradealarmkeyword, evtl. über websocket oder request.body
+									target: '.alarmed', // dann upgradealarmkeyword, evtl. über websocket oder request.body
 									guard: 'allResourcesAlarmed',
 								},
 								{
@@ -143,13 +165,7 @@ export const scene = createMachine(
 						initial: 'disposing',
 						states: {
 							disposing: {},
-							disposed: {
-								on: {
-									'RESOURCE-IN-STATUS-3': {
-										target: 'onApproach',
-									},
-								},
-							},
+							disposed: {},
 							onApproach: {},
 							onScene: {
 								on: {
@@ -179,6 +195,10 @@ export const scene = createMachine(
 							},
 						},
 						on: {
+							'RESOURCE-IN-STATUS-3': {
+								actions: { type: 'setResourceOnApproachStatus' },
+								target: '.onApproach',
+							},
 							'RESOURCE-IN-STATUS-4': {
 								actions: { type: 'setResourceOnSceneStatus' },
 								target: '.onScene',
@@ -289,6 +309,17 @@ export const scene = createMachine(
 					};
 				}
 			),
+			cancelResource: sendTo(
+				({ context, event, system }) =>
+					system.get(
+						`${context.resourceLines[event.params.resourceLineIndex].callsign}`
+					),
+				() => {
+					return {
+						type: 'CANCEL-RESOURCE',
+					};
+				}
+			),
 			setResourceLeftSceneStatus: ({ context, event }) => {
 				const { resourceLineIndex } = event.params;
 				assign({
@@ -304,6 +335,16 @@ export const scene = createMachine(
 					resourceLines: (context.resourceLines[resourceLineIndex] = {
 						...context.resourceLines[resourceLineIndex],
 						status: 'finished',
+					}),
+				});
+			},
+			setResourceOnApproachStatus: ({ context, event }) => {
+				const { resourceLineIndex } = event.params;
+				console.log(resourceLineIndex);
+				assign({
+					resourceLines: (context.resourceLines[resourceLineIndex] = {
+						...context.resourceLines[resourceLineIndex],
+						status: 'on approach',
 					}),
 				});
 			},
@@ -352,19 +393,6 @@ export const scene = createMachine(
 				return context.resourceLines.every(
 					(line) =>
 						line.status === 'finished' || line.status === 'not neccessary'
-				);
-			},
-			resourceLineDisposable: ({ context, event }) => {
-				const { resourceLineIndex } = event.params;
-				const bool =
-					context.resourceLines[resourceLineIndex].status === 'not disposed' ||
-					context.resourceLines[resourceLineIndex].status === 'disposed' ||
-					context.resourceLines[resourceLineIndex].status === 'cancelled';
-				console.log('guard is: ', bool);
-				return (
-					context.resourceLines[resourceLineIndex].status === 'not disposed' ||
-					context.resourceLines[resourceLineIndex].status === 'disposed' ||
-					context.resourceLines[resourceLineIndex].status === 'cancelled'
 				);
 			},
 		},

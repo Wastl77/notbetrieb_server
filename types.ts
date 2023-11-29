@@ -37,6 +37,7 @@ export type Scene = CreateSceneMachineInput & {
 			| 'not disposed'
 			| 'disposed'
 			| 'alarmed'
+			| 'on approach'
 			| 'on scene'
 			| 'left scene'
 			| 'finished'
