@@ -3,7 +3,6 @@ import {
 	assign,
 	raise,
 	sendTo,
-	choose,
 	pure,
 	AnyEventObject,
 } from 'xstate';
@@ -70,7 +69,7 @@ export const scene = createMachine(
 								type: 'setResourceDisposed',
 							},
 							raise({ type: 'CHECK-SCENE-ALARMED' }),
-							raise({ type: 'CHECK-SCENE-DISPOSED' })+´
+							raise({ type: 'CHECK-SCENE-DISPOSED' }),
 						],
 					},
 					'UPGRADE-ALARMKEYWORD': {
