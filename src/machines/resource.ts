@@ -339,6 +339,7 @@ export const resource = createMachine(
 		},
 		guards: {
 			isResourceLineDisposable: ({ event }) => {
+				// https://github.com/statelyai/xstate/discussions/4150
 				const context: any = rootActor
 					.getSnapshot()
 					.children[

@@ -17,6 +17,7 @@ export const initializeApp = async (sessionName: string | undefined) => {
 
 		rootActor = createActor(notbetriebRootMachine, {
 			systemId: 'root',
+			id: 'root',
 			input: undefined,
 			inspect: (inspectionEvent) => {
 				if (inspectionEvent.type === '@xstate.actor') {
