@@ -15,7 +15,9 @@ beforeEach(() => {
 
 	const notbetriebRootMachineTest = notbetriebRootMachine.provide({
 		actors: {
+			//@ts-ignore
 			createSessionDb: fromPromise(() => Promise.resolve(null)),
+			//@ts-ignore
 			fetchInitialData: fromPromise(() => Promise.resolve(resources)),
 		},
 	});
@@ -48,7 +50,8 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 	new Promise((done) => {
 		sceneFlow();
 
-		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
+		const child = rootActor.system.get('sceneNumber1');
+		child.subscribe((state: any) => {
 			if (
 				state.matches({
 					open: { waitingState: 'alarmed', sceneState: 'disposed' },
@@ -61,15 +64,26 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 			}
 		});
 
+		// rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
+		// 	if (
+		// 		state.matches({
+		// 			open: { waitingState: 'alarmed', sceneState: 'disposed' },
+		// 		})
+		// 	) {
+		// 		expect(state.value).toEqual({
+		// 			open: { waitingState: 'alarmed', sceneState: 'disposed' },
+		// 		});
+		// 		done(null);
+		// 	}
+		// });
+
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
 			params: {
 				callsign: '1183-1',
-				eventType: 'DISPOSE-RESOURCE',
-				params: {
-					sceneNumber: '1',
-					resourceLineIndex: '0',
-				},
+				eventType: 'DISPOSE-RESOURCE-REQUEST',
+				sceneNumber: '1',
+				resourceLineIndex: '0',
 			},
 		});
 
@@ -77,11 +91,9 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 			type: 'RESOURCE-EVENT',
 			params: {
 				callsign: '1182-1',
-				eventType: 'DISPOSE-RESOURCE',
-				params: {
-					sceneNumber: '1',
-					resourceLineIndex: '1',
-				},
+				eventType: 'DISPOSE-RESOURCE-REQUEST',
+				sceneNumber: '1',
+				resourceLineIndex: '1',
 			},
 		});
 
@@ -90,7 +102,6 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 			params: {
 				callsign: '1183-1',
 				eventType: 'SET-STATUS-QT',
-				params: {},
 			},
 		});
 
@@ -99,7 +110,6 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 			params: {
 				callsign: '1182-1',
 				eventType: 'SET-STATUS-QT',
-				params: {},
 			},
 		});
 	}));
@@ -108,7 +118,8 @@ it('adds a resource correctly when resource manually added', async () =>
 	new Promise((done) => {
 		sceneFlow();
 
-		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
+		const child = rootActor.system.get('sceneNumber1');
+		child.subscribe((state: any) => {
 			if (
 				state.matches({
 					open: { waitingState: 'alarmed', sceneState: 'disposed' },
@@ -121,15 +132,26 @@ it('adds a resource correctly when resource manually added', async () =>
 			}
 		});
 
+		// rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
+		// 	if (
+		// 		state.matches({
+		// 			open: { waitingState: 'alarmed', sceneState: 'disposed' },
+		// 		})
+		// 	) {
+		// 		expect(state.value).toEqual({
+		// 			open: { waitingState: 'alarmed', sceneState: 'disposed' },
+		// 		});
+		// 		done(null);
+		// 	}
+		// });
+
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
 			params: {
 				callsign: '1183-1',
-				eventType: 'DISPOSE-RESOURCE',
-				params: {
-					sceneNumber: '1',
-					resourceLineIndex: '0',
-				},
+				eventType: 'DISPOSE-RESOURCE-REQUEST',
+				sceneNumber: '1',
+				resourceLineIndex: '0',
 			},
 		});
 
@@ -137,11 +159,9 @@ it('adds a resource correctly when resource manually added', async () =>
 			type: 'RESOURCE-EVENT',
 			params: {
 				callsign: '1182-1',
-				eventType: 'DISPOSE-RESOURCE',
-				params: {
-					sceneNumber: '1',
-					resourceLineIndex: '1',
-				},
+				eventType: 'DISPOSE-RESOURCE-REQUEST',
+				sceneNumber: '1',
+				resourceLineIndex: '1',
 			},
 		});
 
@@ -159,7 +179,6 @@ it('adds a resource correctly when resource manually added', async () =>
 			params: {
 				callsign: '1183-1',
 				eventType: 'SET-STATUS-QT',
-				params: {},
 			},
 		});
 
@@ -168,7 +187,6 @@ it('adds a resource correctly when resource manually added', async () =>
 			params: {
 				callsign: '1182-1',
 				eventType: 'SET-STATUS-QT',
-				params: {},
 			},
 		});
 
@@ -177,7 +195,6 @@ it('adds a resource correctly when resource manually added', async () =>
 			params: {
 				callsign: '1184-1',
 				eventType: 'SET-STATUS-QT',
-				params: {},
 			},
 		});
 	}));
@@ -202,7 +219,8 @@ it('should add the resource lines and correct types when alarm keyword gets upda
 			params: { sceneId: 1, newKeyword: 'F3[WohnY.]' },
 		});
 
-		rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
+		const child = rootActor.system.get('sceneNumber1');
+		child.subscribe((state: any) => {
 			if (
 				state.matches({
 					open: { waitingState: 'waiting', sceneState: 'disposing' },
@@ -214,15 +232,25 @@ it('should add the resource lines and correct types when alarm keyword gets upda
 			}
 		});
 
+		// rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
+		// 	if (
+		// 		state.matches({
+		// 			open: { waitingState: 'waiting', sceneState: 'disposing' },
+		// 		})
+		// 	) {
+		// 		expect(state.context.resourceLines).toHaveLength(12);
+		// 		expect(state.context.resourceLines[0].callsign).toEqual('1010-1');
+		// 		done(null);
+		// 	}
+		// });
+
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
 			params: {
 				callsign: '1010-1',
-				eventType: 'DISPOSE-RESOURCE',
-				params: {
-					sceneNumber: '1',
-					resourceLineIndex: '0',
-				},
+				eventType: 'DISPOSE-RESOURCE-REQUEST',
+				sceneNumber: '1',
+				resourceLineIndex: '0',
 			},
 		});
 	}));

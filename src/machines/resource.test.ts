@@ -10,7 +10,9 @@ beforeEach(() => {
 
 	const notbetriebRootMachineTest = notbetriebRootMachine.provide({
 		actors: {
+			//@ts-ignore
 			createSessionDb: fromPromise(() => Promise.resolve(null)),
+			//@ts-ignore
 			fetchInitialData: fromPromise(() => Promise.resolve(resources)),
 		},
 	});
@@ -43,10 +45,11 @@ it('should set the correct scene Number and resource line index when disposed fo
 	new Promise((done) => {
 		sceneFlow();
 
-		rootActor.getSnapshot().children['1183-1'].subscribe((state) => {
+		const child = rootActor.system.get('1183-1');
+		child.subscribe((state: any) => {
 			if (state.matches({ reserved: 'R2' })) {
 				expect(state.value).toEqual({ reserved: 'R2' });
-				expect(state.context.sceneNumber).toEqual('1');
+				expect(state.context.sceneNumber).toEqual(1);
 				expect(state.context.resourceLineIndex).toEqual('0');
 				done(null);
 			}
@@ -56,11 +59,9 @@ it('should set the correct scene Number and resource line index when disposed fo
 			type: 'RESOURCE-EVENT',
 			params: {
 				callsign: '1183-1',
-				eventType: 'DISPOSE-RESOURCE',
-				params: {
-					sceneNumber: '1',
-					resourceLineIndex: '0',
-				},
+				eventType: 'DISPOSE-RESOURCE-REQUEST',
+				sceneNumber: '1',
+				resourceLineIndex: '0',
 			},
 		});
 	}));

@@ -31,7 +31,7 @@ export const initializeApp = async (sessionName: string | undefined) => {
 							inspectionEvent.sourceRef?.getSnapshot().state?.context
 						}`
 					);
-					console.log(inspectionEvent.targetRef.id);
+					console.log(inspectionEvent.actorRef.id);
 					console.log(inspectionEvent.event);
 				}
 			},

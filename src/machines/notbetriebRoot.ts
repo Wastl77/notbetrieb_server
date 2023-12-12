@@ -1,10 +1,4 @@
-import {
-	assign,
-	createMachine,
-	sendTo,
-	ActorRefFrom,
-	fromPromise,
-} from 'xstate';
+import { assign, sendTo, ActorRefFrom, fromPromise, setup } from 'xstate';
 import { resource } from './resource.js';
 import { scene } from './scene.js';
 import { Prisma, PrismaClient } from '@prisma/client';
@@ -21,186 +15,200 @@ const prismaInitialDb = new PrismaClient({
 	},
 });
 
-export const notbetriebRootMachine = createMachine(
-	{
-		types: {} as {
-			//type actors
-			events:
-				| {
-						type: 'RESOURCE-EVENT';
-						params: {
-							callsign: string;
-							eventType: string;
-							params: { sceneNumber?: string; resourceLineIndex?: string };
-						};
-				  }
-				| {
-						type: 'CREATE-SCENE';
-						params: CreateSceneMachineInput;
-				  }
-				| {
-						type: 'UPGRADE-ALARMKEYWORD';
-						params: { sceneId: number; newKeyword: string };
-				  }
-				| {
-						type: 'ADD-RESOURCE-MANUAL';
-						params: { sceneId: number; callsign: string; type: string };
-				  };
-			context: {
-				isSession: boolean;
-				resourceActors: ActorRefFrom<typeof resource>[];
-				sceneActor: ActorRefFrom<typeof scene>[];
-				fetchResult: Prisma.ResourceCreateManyInput[] | null;
-				sceneNumber: number;
-			};
-		},
-		id: 'Notbetrieb Root',
+const createSessionDb = fromPromise(
+	async ({ input }: { input: Prisma.ResourceCreateManyInput[] }) =>
+		await prisma.resource.createMany({
+			data: input,
+		})
+);
+
+const fetchInitialData = fromPromise(async () => {
+	return await prismaInitialDb.resource.findMany();
+});
+
+export const notbetriebRootMachine = setup({
+	types: {} as {
+		events:
+			| {
+					type: 'RESOURCE-EVENT';
+					params: {
+						callsign: string;
+						eventType: string;
+						sceneNumber?: string;
+						resourceLineIndex?: string;
+					};
+			  }
+			| {
+					type: 'CREATE-SCENE';
+					params: CreateSceneMachineInput;
+			  }
+			| {
+					type: 'UPGRADE-ALARMKEYWORD';
+					params: { sceneId: number; newKeyword: string };
+			  }
+			| {
+					type: 'ADD-RESOURCE-MANUAL';
+					params: { sceneId: number; callsign: string; type: string };
+			  };
 		context: {
-			isSession: false,
-			resourceActors: [],
-			sceneActor: [],
-			fetchResult: null,
-			sceneNumber: 1,
+			isSession: boolean;
+			resourceActors: ActorRefFrom<typeof resource>[];
+			sceneActor: ActorRefFrom<typeof scene>[];
+			fetchResult: Prisma.ResourceCreateManyInput[];
+			sceneNumber: number;
+		};
+	},
+	actions: {
+		createResourceActors: assign({
+			resourceActors: ({ spawn }, resources: Prisma.ResourceCreateInput[]) =>
+				resources.map((res) => {
+					return spawn('resource', {
+						systemId: res.callsign,
+						id: res.callsign,
+						input: {
+							resourceType: res.type,
+							callsign: res.callsign,
+						},
+					});
+				}),
+			fetchResult: (_, resources) => resources,
+		}),
+		createSceneActor: assign({
+			sceneActor: ({ context, spawn }, sceneData: CreateSceneMachineInput) =>
+				context.sceneActor.concat(
+					spawn('scene', {
+						input: {
+							address: {
+								...sceneData.address,
+							},
+							alarmKeyword: sceneData.alarmKeyword,
+							sceneNumber: context.sceneNumber,
+							initialResources: sceneData.initialResources,
+						},
+						id: `sceneNumber${context.sceneNumber}`,
+						systemId: `sceneNumber${context.sceneNumber}`,
+					})
+				),
+			sceneNumber: ({ context }) => context.sceneNumber + 1,
+		}),
+	},
+	actors: {
+		scene,
+		resource,
+		createSessionDb,
+		fetchInitialData,
+	},
+}).createMachine({
+	id: 'Notbetrieb Root',
+	context: {
+		isSession: false,
+		resourceActors: [],
+		sceneActor: [],
+		fetchResult: [],
+		sceneNumber: 1,
+	},
+	initial: 'fetchInitialData',
+	states: {
+		fetchInitialData: {
+			invoke: {
+				src: 'fetchInitialData',
+				onDone: {
+					actions: [
+						{
+							type: 'createResourceActors',
+							params: ({ event }) => event.output,
+						},
+					],
+					target: 'createSessionDb',
+				},
+				onError: {
+					actions: [() => console.log('Error fetching initial data')],
+					target: 'fetchError',
+				},
+			},
 		},
-		initial: 'fetchInitialData',
-		states: {
-			fetchInitialData: {
-				invoke: {
-					src: 'fetchInitialData',
-					onDone: {
-						actions: [
-							assign({
-								resourceActors: ({ event, spawn }) =>
-									event.output.map((res: Prisma.ResourceCreateInput) => {
-										return spawn(resource, {
-											systemId: res.callsign,
-											id: res.callsign,
-											input: {
-												resourceType: res.type,
-												callsign: res.callsign,
-											},
-										});
-									}),
-								fetchResult: ({ event }) => event.output,
-							}),
-						],
-						target: 'createSessionDb',
-					},
-					onError: {
-						actions: [() => console.log('Error fetching initial data')],
-						target: 'fetchError',
-					},
+		createSessionDb: {
+			invoke: {
+				src: 'createSessionDb',
+				input: ({ context }) => context.fetchResult,
+				onDone: {
+					target: 'ready',
 				},
 			},
-			createSessionDb: {
-				invoke: {
-					src: 'createSessionDb',
-					input: ({ context }) => ({
-						resources: context.fetchResult,
-					}),
-					onDone: {
-						target: 'ready',
-					},
+		},
+		fetchError: {
+			//TODO add abort controller when implemented by xstate
+			after: {
+				3000: {
+					target: 'fetchInitialData',
 				},
 			},
-			fetchError: {
-				//TODO add abort controller when implemented by xstate
-				after: {
-					3000: {
-						target: 'fetchInitialData',
-					},
+		},
+		ready: {
+			entry: [assign({ isSession: true, fetchResult: [] })],
+			on: {
+				'RESOURCE-EVENT': {
+					actions: [
+						sendTo(
+							({ event, system }) => system.get(event.params.callsign),
+							({ event }) => {
+								return {
+									type: event.params.eventType,
+									params: { ...event.params },
+								};
+							}
+						),
+					],
 				},
-			},
-			ready: {
-				entry: [assign({ isSession: true, fetchResult: null })],
-				on: {
-					'RESOURCE-EVENT': {
-						actions: [
-							sendTo(
-								({ event, system }) => system.get(event.params.callsign),
-								({ event }) => {
-									return {
-										type: event.params.eventType,
-										params: { ...event.params.params },
-									};
-								}
-							),
-						],
-					},
-					'CREATE-SCENE': {
-						actions: [
-							assign({
-								sceneActor: ({ event, context, spawn }) =>
-									context.sceneActor.concat(
-										spawn(scene, {
-											input: {
-												address: {
-													street: event.params.address.street,
-													object: event.params.address.object,
-													district: event.params.address.district,
-												},
-												alarmKeyword: event.params.alarmKeyword,
-												sceneNumber: context.sceneNumber,
-												initialResources: event.params.initialResources,
-											},
-											id: `sceneNumber${context.sceneNumber}`,
-											systemId: `sceneNumber${context.sceneNumber}`,
-										})
-									),
-								sceneNumber: ({ context }) => context.sceneNumber + 1,
-							}),
-						],
-					},
-					'UPGRADE-ALARMKEYWORD': {
-						//! wie resource event machen, nicht einzelne events für scene und gesammelt für resource
-						actions: [
-							sendTo(
-								({ event, system }) =>
-									system.get(`sceneNumber${event.params.sceneId}`),
-								({ event }) => {
-									return {
-										type: 'UPGRADE-ALARMKEYWORD',
-										params: { newKeyword: event.params.newKeyword },
-									};
-								}
-							),
-						],
-					},
-					'ADD-RESOURCE-MANUAL': {
-						actions: [
-							sendTo(
-								({ event, system }) =>
-									system.get(`sceneNumber${event.params.sceneId}`),
-								({ event }) => {
-									return {
-										type: 'ADD-RESOURCE-MANUAL',
-										params: {
-											callsign: event.params.callsign,
-											type: event.params.type,
-										},
-									};
-								}
-							),
-						],
-					},
+				'CREATE-SCENE': {
+					actions: [
+						{
+							type: 'createSceneActor',
+							params: ({ event }) => {
+								return {
+									address: {
+										...event.params.address,
+									},
+									alarmKeyword: event.params.alarmKeyword,
+									initialResources: event.params.initialResources,
+								};
+							},
+						},
+					],
+				},
+				'UPGRADE-ALARMKEYWORD': {
+					//! wie resource event machen, nicht einzelne events für scene und gesammelt für resource
+					actions: [
+						sendTo(
+							({ event, system }) =>
+								system.get(`sceneNumber${event.params.sceneId}`),
+							({ event }) => {
+								return {
+									type: 'UPGRADE-ALARMKEYWORD',
+									params: { newKeyword: event.params.newKeyword },
+								};
+							}
+						),
+					],
+				},
+				'ADD-RESOURCE-MANUAL': {
+					actions: [
+						sendTo(
+							({ event, system }) =>
+								system.get(`sceneNumber${event.params.sceneId}`),
+							({ event }) => {
+								return {
+									type: 'ADD-RESOURCE-MANUAL',
+									params: {
+										callsign: event.params.callsign,
+										type: event.params.type,
+									},
+								};
+							}
+						),
+					],
 				},
 			},
 		},
 	},
-	{
-		actors: {
-			createSessionDb: fromPromise(
-				async (
-					{ input }: any //TODO typing
-				) =>
-					await prisma.resource.createMany({
-						data: input.resources,
-					})
-			),
-			fetchInitialData: fromPromise(async () => {
-				return await prismaInitialDb.resource.findMany();
-				// return new Promise((resolve, reject) => setTimeout(reject, 3000));
-			}),
-		},
-	}
-);
+});

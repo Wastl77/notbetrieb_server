@@ -42,10 +42,13 @@ router.post('/:sceneId/ADD-RESOURCE-MANUAL', (req, res) => {
 // dev function start
 router.get('/', (req, res) => {
 	const snapshot = rootActor.getSnapshot();
+	console.log(Object.keys(snapshot.children));
 	Object.keys(snapshot.children).forEach((child) => {
-		console.log(snapshot.children[child].getSnapshot().context); //! hier den state loggen und gucken ob in R2(Qt) gegangen wird
+		//@ts-ignore
+		console.log(snapshot.children[child]?.getSnapshot().context);
 	});
-	console.log(snapshot.children['sceneNumber1'].getSnapshot().value);
+	//@ts-ignore
+	console.log(snapshot.children['sceneNumber1']?.getSnapshot().value);
 	res.send('Ok');
 });
 // dev function end

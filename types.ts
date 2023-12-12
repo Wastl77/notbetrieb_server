@@ -27,22 +27,24 @@ export type CreateSceneMachineInput = CreateSceneInput & {
 	initialResources: string[];
 };
 
+export type ResourceLineStatus =
+	| 'not disposed'
+	| 'disposed'
+	| 'alarmed'
+	| 'on approach'
+	| 'on scene'
+	| 'left scene'
+	| 'finished'
+	| 'cancelled'
+	| 'not neccessary';
+
 export type Scene = CreateSceneMachineInput & {
 	resourceLines: {
 		index: number;
 		type: string;
 		disposedType: string | null;
 		callsign: string | null;
-		status:
-			| 'not disposed'
-			| 'disposed'
-			| 'alarmed'
-			| 'on approach'
-			| 'on scene'
-			| 'left scene'
-			| 'finished'
-			| 'cancelled'
-			| 'not neccessary';
+		status: ResourceLineStatus;
 		cancelledCallsign?: string;
 	}[];
 };

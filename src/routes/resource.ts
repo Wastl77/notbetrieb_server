@@ -17,10 +17,8 @@ router.post('/', (req, res) => {
 			params: {
 				callsign,
 				eventType: event,
-				params: {
-					sceneNumber,
-					resourceLineIndex,
-				},
+				sceneNumber,
+				resourceLineIndex,
 			},
 		});
 	}
