@@ -1,6 +1,7 @@
 import { createActor, Actor } from 'xstate';
 import { notbetriebRootMachine } from './machines/notbetriebRoot.js';
 import { startPrisma } from './db/prismaClient.js';
+import { getPersistedState, persistState } from './db/persistState.js';
 
 export let rootActor: Actor<typeof notbetriebRootMachine>;
 
@@ -18,7 +19,6 @@ export const initializeApp = async (sessionName: string | undefined) => {
 		rootActor = createActor(notbetriebRootMachine, {
 			systemId: 'root',
 			id: 'root',
-			input: undefined,
 			inspect: (inspectionEvent) => {
 				if (inspectionEvent.type === '@xstate.actor') {
 					console.log('ACTOR Event:');
@@ -34,11 +34,48 @@ export const initializeApp = async (sessionName: string | undefined) => {
 					console.log(inspectionEvent.actorRef.id);
 					console.log(inspectionEvent.event);
 				}
+				if (inspectionEvent.type === '@xstate.snapshot') {
+					console.log(inspectionEvent.snapshot);
+					if (inspectionEvent.actorRef === rootActor) {
+						persistState();
+						console.log('State persisted!');
+					}
+				}
 			},
 		});
 		startPrisma();
 	} else {
-		//!Implement when v5 persistence working, see branch feature/remoteAppStart
+		process.env.SESSION_NAME = sessionName;
+		const persistedState = await getPersistedState();
+		rootActor = createActor(notbetriebRootMachine, {
+			systemId: 'root',
+			id: 'root',
+			snapshot: persistedState,
+			inspect: (inspectionEvent) => {
+				if (inspectionEvent.type === '@xstate.actor') {
+					console.log('ACTOR Event:');
+					console.log(inspectionEvent.actorRef.id);
+				}
+				if (inspectionEvent.type === '@xstate.event') {
+					console.log('EVENT Event:');
+					console.log(
+						`ID: ${inspectionEvent.sourceRef?.id}, Context: ${
+							inspectionEvent.sourceRef?.getSnapshot().state?.context
+						}`
+					);
+					console.log(inspectionEvent.actorRef.id);
+					console.log(inspectionEvent.event);
+				}
+				if (inspectionEvent.type === '@xstate.snapshot') {
+					console.log(inspectionEvent.snapshot);
+					if (inspectionEvent.actorRef === rootActor) {
+						persistState();
+						console.log('State persisted!');
+					}
+				}
+			},
+		});
+		startPrisma();
 	}
 
 	// rootActor.subscribe({
