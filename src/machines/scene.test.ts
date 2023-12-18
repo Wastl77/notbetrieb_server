@@ -64,19 +64,6 @@ it('should go from state waiting to state alarmed when all disposed resources ar
 			}
 		});
 
-		// rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
-		// 	if (
-		// 		state.matches({
-		// 			open: { waitingState: 'alarmed', sceneState: 'disposed' },
-		// 		})
-		// 	) {
-		// 		expect(state.value).toEqual({
-		// 			open: { waitingState: 'alarmed', sceneState: 'disposed' },
-		// 		});
-		// 		done(null);
-		// 	}
-		// });
-
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
 			params: {
@@ -131,19 +118,6 @@ it('adds a resource correctly when resource manually added', async () =>
 				done(null);
 			}
 		});
-
-		// rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
-		// 	if (
-		// 		state.matches({
-		// 			open: { waitingState: 'alarmed', sceneState: 'disposed' },
-		// 		})
-		// 	) {
-		// 		expect(state.value).toEqual({
-		// 			open: { waitingState: 'alarmed', sceneState: 'disposed' },
-		// 		});
-		// 		done(null);
-		// 	}
-		// });
 
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
@@ -231,18 +205,6 @@ it('should add the resource lines and correct types when alarm keyword gets upda
 				done(null);
 			}
 		});
-
-		// rootActor.getSnapshot().children['sceneNumber1'].subscribe((state) => {
-		// 	if (
-		// 		state.matches({
-		// 			open: { waitingState: 'waiting', sceneState: 'disposing' },
-		// 		})
-		// 	) {
-		// 		expect(state.context.resourceLines).toHaveLength(12);
-		// 		expect(state.context.resourceLines[0].callsign).toEqual('1010-1');
-		// 		done(null);
-		// 	}
-		// });
 
 		rootActor.send({
 			type: 'RESOURCE-EVENT',
