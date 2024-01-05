@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 export let prisma: PrismaClient;
 
-export const startPrisma = () => {
+export const startPrisma = async () => {
 	prisma = new PrismaClient({
 		datasources: {
 			db: {
@@ -10,4 +10,11 @@ export const startPrisma = () => {
 			},
 		},
 	});
+
+	try {
+		await prisma.$connect();
+		console.log('Erfolgreich mit der Datenbank verbunden');
+	} catch (error) {
+		console.error('Fehler bei der Verbindung mit der Datenbank:', error);
+	}
 };

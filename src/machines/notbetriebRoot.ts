@@ -66,8 +66,9 @@ export const notbetriebRootMachine = setup({
 						systemId: res.callsign,
 						id: res.callsign,
 						input: {
-							resourceType: res.type,
+							type: res.type,
 							callsign: res.callsign,
+							area: res.area,
 						},
 					});
 				}),
@@ -119,7 +120,8 @@ export const notbetriebRootMachine = setup({
 							params: ({ event }) => event.output,
 						},
 					],
-					target: 'createSessionDb',
+					// target: 'createSessionDb',
+					target: 'ready',
 				},
 				onError: {
 					actions: [() => console.log('Error fetching initial data')],

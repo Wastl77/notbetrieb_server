@@ -1,9 +1,46 @@
-import { createActor, Actor } from 'xstate';
+import { createActor, Actor, AnyActorRef } from 'xstate';
 import { notbetriebRootMachine } from './machines/notbetriebRoot.js';
-import { startPrisma } from './db/prismaClient.js';
+import { startPrisma, prisma } from './db/prismaClient.js';
 import { getPersistedState, persistState } from './db/persistState.js';
 
 export let rootActor: Actor<typeof notbetriebRootMachine>;
+
+const subscribeAndPersistActor = async (actor: AnyActorRef) => {
+	console.log(`Subscribe called for: ${actor.id}`);
+	if (actor.src === 'resource') {
+		actor.subscribe(async (snapshot) => {
+			console.log(
+				`ActorId-Context: ${actor.id}, ${JSON.stringify(
+					snapshot.context,
+					undefined,
+					2
+				)}`
+			);
+			console.log(
+				`ActorId-State: ${actor.id}, ${JSON.stringify(
+					snapshot.value,
+					undefined,
+					2
+				)}`
+			);
+			const result = await prisma.resource.upsert({
+				where: {
+					callsign: snapshot.context.callsign,
+				},
+				update: {
+					resourceStatus: JSON.stringify(snapshot.value),
+					resourceLineIndex: snapshot.context.resourceLineIndex,
+					sceneNumber: snapshot.context.sceneNumber,
+				},
+				create: {
+					...snapshot.context,
+					resourceStatus: JSON.stringify(snapshot.value),
+				},
+			});
+			console.log(result);
+		});
+	}
+};
 
 /**
  * Initializes the app.
@@ -16,66 +53,76 @@ export const initializeApp = async (sessionName: string | undefined) => {
 			.toLocaleString('de-DE')
 			.replace(/[:.\s]/g, '-');
 
+		await startPrisma();
+
 		rootActor = createActor(notbetriebRootMachine, {
 			systemId: 'root',
 			id: 'root',
 			inspect: (inspectionEvent) => {
 				if (inspectionEvent.type === '@xstate.actor') {
-					console.log('ACTOR Event:');
-					console.log(inspectionEvent.actorRef.id);
+					// console.log('ACTOR Event:');
+					// console.log(inspectionEvent);
+					if (
+						inspectionEvent.actorRef.src === 'resource' ||
+						inspectionEvent.actorRef.src === 'scene'
+					) {
+						subscribeAndPersistActor(inspectionEvent.actorRef);
+					}
 				}
-				if (inspectionEvent.type === '@xstate.event') {
-					console.log('EVENT Event:');
-					console.log(
-						`ID: ${inspectionEvent.sourceRef?.id}, Context: ${
-							inspectionEvent.sourceRef?.getSnapshot().state?.context
-						}`
-					);
-					console.log(inspectionEvent.actorRef.id);
-					console.log(inspectionEvent.event);
-				}
+				// if (inspectionEvent.type === '@xstate.event') {
+				// 	console.log('EVENT Event:');
+				// 	console.log(
+				// 		`ID: ${inspectionEvent.sourceRef?.id}, Context: ${
+				// 			inspectionEvent.sourceRef?.getSnapshot().state?.context
+				// 		}`
+				// 	);
+				// 	console.log(inspectionEvent.actorRef.id);
+				// 	console.log(inspectionEvent.event);
+				// }
 				if (inspectionEvent.type === '@xstate.snapshot') {
-					console.log(inspectionEvent.snapshot);
+					// console.log(inspectionEvent.snapshot);
 					if (inspectionEvent.actorRef === rootActor) {
 						persistState();
 						console.log('State persisted!');
+						// console.log(inspectionEvent);
 					}
 				}
 			},
 		});
-		startPrisma();
 	} else {
 		process.env.SESSION_NAME = sessionName;
+
+		await startPrisma();
+
 		const persistedState = await getPersistedState();
 		rootActor = createActor(notbetriebRootMachine, {
 			systemId: 'root',
 			id: 'root',
 			snapshot: persistedState,
-			inspect: (inspectionEvent) => {
-				if (inspectionEvent.type === '@xstate.actor') {
-					console.log('ACTOR Event:');
-					console.log(inspectionEvent.actorRef.id);
-				}
-				if (inspectionEvent.type === '@xstate.event') {
-					console.log('EVENT Event:');
-					console.log(
-						`ID: ${inspectionEvent.sourceRef?.id}, Context: ${
-							inspectionEvent.sourceRef?.getSnapshot().state?.context
-						}`
-					);
-					console.log(inspectionEvent.actorRef.id);
-					console.log(inspectionEvent.event);
-				}
-				if (inspectionEvent.type === '@xstate.snapshot') {
-					console.log(inspectionEvent.snapshot);
-					if (inspectionEvent.actorRef === rootActor) {
-						persistState();
-						console.log('State persisted!');
-					}
-				}
-			},
+			// inspect: (inspectionEvent) => {
+			// 	if (inspectionEvent.type === '@xstate.actor') {
+			// 		console.log('ACTOR Event:');
+			// 		console.log(inspectionEvent.actorRef.id);
+			// 	}
+			// 	if (inspectionEvent.type === '@xstate.event') {
+			// 		console.log('EVENT Event:');
+			// 		console.log(
+			// 			`ID: ${inspectionEvent.sourceRef?.id}, Context: ${
+			// 				inspectionEvent.sourceRef?.getSnapshot().state?.context
+			// 			}`
+			// 		);
+			// 		console.log(inspectionEvent.actorRef.id);
+			// 		console.log(inspectionEvent.event);
+			// 	}
+			// 	if (inspectionEvent.type === '@xstate.snapshot') {
+			// 		console.log(inspectionEvent.snapshot);
+			// 		if (inspectionEvent.actorRef === rootActor) {
+			// 			persistState();
+			// 			console.log('State persisted!');
+			// 		}
+			// 	}
+			// },
 		});
-		startPrisma();
 	}
 
 	// rootActor.subscribe({

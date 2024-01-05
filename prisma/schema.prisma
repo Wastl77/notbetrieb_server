@@ -11,9 +11,11 @@ datasource db {
 }
 
 model Resource {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
-  callsign String
-  area     String
-  status   String
-  type     String
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  callsign          String  @unique
+  area              String
+  resourceStatus    String?
+  type              String
+  resourceLineIndex String?
+  sceneNumber       Int?
 }

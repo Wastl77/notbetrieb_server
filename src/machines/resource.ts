@@ -24,10 +24,15 @@ export const resource = setup({
 				callsign: string;
 			};
 		};
-		input: { resourceType: string; callsign: string };
-		context: {
-			resourceType: string;
+		input: {
+			type: string;
 			callsign: string;
+			area: string;
+		};
+		context: {
+			type: string;
+			callsign: string;
+			area: string;
 			sceneNumber: string | null;
 			resourceLineIndex: string | null;
 		};
@@ -64,7 +69,7 @@ export const resource = setup({
 					type: 'DISPOSE-RESOURCE-REQUEST',
 					params: {
 						resourceLineIndex: event.params.resourceLineIndex,
-						type: context.resourceType,
+						type: context.type,
 						callsign: context.callsign,
 						sender: self,
 					},
@@ -74,8 +79,9 @@ export const resource = setup({
 	},
 }).createMachine({
 	context: ({ input }) => ({
-		resourceType: input.resourceType,
+		type: input.type,
 		callsign: input.callsign,
+		area: input.area,
 		resourceLineIndex: null,
 		sceneNumber: null,
 	}),
@@ -313,3 +319,18 @@ export const resource = setup({
 		},
 	},
 });
+
+// function persistResourceInDb(resourceActorLogic: any) {
+// 	const enhancedResourceLogic = {
+// 		...resourceActorLogic,
+// 		transition: (state: any, event: any, actorCtx: any) => {
+// 			console.log('State:', state);
+// 			console.log('Event:', event);
+// 			console.log('Context:', actorCtx);
+// 			return resourceActorLogic.transition(state, event, actorCtx);
+// 		},
+// 	};
+// 	return enhancedResourceLogic;
+// }
+
+// export const resource = persistResourceInDb(resourceMachine);
