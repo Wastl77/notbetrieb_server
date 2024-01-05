@@ -9,20 +9,6 @@ const subscribeAndPersistActor = async (actor: AnyActorRef) => {
 	console.log(`Subscribe called for: ${actor.id}`);
 	if (actor.src === 'resource') {
 		actor.subscribe(async (snapshot) => {
-			console.log(
-				`ActorId-Context: ${actor.id}, ${JSON.stringify(
-					snapshot.context,
-					undefined,
-					2
-				)}`
-			);
-			console.log(
-				`ActorId-State: ${actor.id}, ${JSON.stringify(
-					snapshot.value,
-					undefined,
-					2
-				)}`
-			);
 			const result = await prisma.resource.upsert({
 				where: {
 					callsign: snapshot.context.callsign,
@@ -60,8 +46,6 @@ export const initializeApp = async (sessionName: string | undefined) => {
 			id: 'root',
 			inspect: (inspectionEvent) => {
 				if (inspectionEvent.type === '@xstate.actor') {
-					// console.log('ACTOR Event:');
-					// console.log(inspectionEvent);
 					if (
 						inspectionEvent.actorRef.src === 'resource' ||
 						inspectionEvent.actorRef.src === 'scene'
@@ -69,22 +53,10 @@ export const initializeApp = async (sessionName: string | undefined) => {
 						subscribeAndPersistActor(inspectionEvent.actorRef);
 					}
 				}
-				// if (inspectionEvent.type === '@xstate.event') {
-				// 	console.log('EVENT Event:');
-				// 	console.log(
-				// 		`ID: ${inspectionEvent.sourceRef?.id}, Context: ${
-				// 			inspectionEvent.sourceRef?.getSnapshot().state?.context
-				// 		}`
-				// 	);
-				// 	console.log(inspectionEvent.actorRef.id);
-				// 	console.log(inspectionEvent.event);
-				// }
 				if (inspectionEvent.type === '@xstate.snapshot') {
-					// console.log(inspectionEvent.snapshot);
 					if (inspectionEvent.actorRef === rootActor) {
 						persistState();
 						console.log('State persisted!');
-						// console.log(inspectionEvent);
 					}
 				}
 			},
@@ -99,81 +71,27 @@ export const initializeApp = async (sessionName: string | undefined) => {
 			systemId: 'root',
 			id: 'root',
 			snapshot: persistedState,
-			// inspect: (inspectionEvent) => {
-			// 	if (inspectionEvent.type === '@xstate.actor') {
-			// 		console.log('ACTOR Event:');
-			// 		console.log(inspectionEvent.actorRef.id);
-			// 	}
-			// 	if (inspectionEvent.type === '@xstate.event') {
-			// 		console.log('EVENT Event:');
-			// 		console.log(
-			// 			`ID: ${inspectionEvent.sourceRef?.id}, Context: ${
-			// 				inspectionEvent.sourceRef?.getSnapshot().state?.context
-			// 			}`
-			// 		);
-			// 		console.log(inspectionEvent.actorRef.id);
-			// 		console.log(inspectionEvent.event);
-			// 	}
-			// 	if (inspectionEvent.type === '@xstate.snapshot') {
-			// 		console.log(inspectionEvent.snapshot);
-			// 		if (inspectionEvent.actorRef === rootActor) {
-			// 			persistState();
-			// 			console.log('State persisted!');
-			// 		}
-			// 	}
-			// },
+			inspect: (inspectionEvent) => {
+				if (inspectionEvent.type === '@xstate.actor') {
+					console.log('ACTOR Event:');
+					console.log(inspectionEvent.actorRef.id);
+					if (
+						inspectionEvent.actorRef.src === 'resource' ||
+						inspectionEvent.actorRef.src === 'scene'
+					) {
+						subscribeAndPersistActor(inspectionEvent.actorRef);
+					}
+				}
+				if (inspectionEvent.type === '@xstate.snapshot') {
+					if (inspectionEvent.actorRef === rootActor) {
+						persistState();
+						console.log('State persisted!');
+					}
+				}
+			},
 		});
 	}
 
-	// rootActor.subscribe({
-	// 	next(state: any) {
-	// 		console.log('Actual State', state.value, 'context: ', state.context);
-	// 	},
-	// 	complete() {
-	// 		console.log('workflow completed', rootActor.getSnapshot().output);
-	// 	},
-	// });
-
 	rootActor.start();
-
-	// const rootActorSnapshot = await waitFor(rootActor, (state) =>
-	// 	state.matches('ready')
-	// );
-
-	// Object.keys(rootActorSnapshot.children).forEach((child) => {
-	// 	let previousSnapshot = rootActorSnapshot.children[child].getSnapshot();
-	// 	rootActorSnapshot.children[child].subscribe((snapshot: any) => {
-	// 		console.log(
-	// 			'rootActor child subscribe ',
-	// 			snapshot.value,
-	// 			'child ',
-	// 			child
-	// 		);
-	// 		if (previousSnapshot === snapshot) {
-	// 			console.log('true'); // hier in mongodb schreiben
-	// 		}
-	// 		previousSnapshot = snapshot;
-	// 	});
-	// });
-
-	// setTimeout(() => {
-	// 	const snapshot = rootActor.getSnapshot();
-	// 	console.log(snapshot.children['sceneNumber1'].getSnapshot().context);
-	// }, 12000);
-
-	// startPrisma();
-
-	// rootActor.subscribe((state: any) => {
-	// 	if (state.matches('ready')) {
-	// 		if (rootActor.getSnapshot().children['sceneNumber1'] !== undefined) {
-	// 			const sceneChild = rootActor
-	// 				.getSnapshot()
-	// 				.children['sceneNumber1'].getSnapshot();
-	// 			console.log(sceneChild.state);
-	// 		}
-	// 		const child = rootActor.getSnapshot().children['1183-1'].getSnapshot();
-	// 		console.log(child.context);
-	// 	}
-	// });
 	console.log('App initialized');
 };
