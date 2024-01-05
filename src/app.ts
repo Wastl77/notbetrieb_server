@@ -25,6 +25,23 @@ const subscribeAndPersistActor = async (actor: AnyActorRef) => {
 			});
 			console.log(result);
 		});
+	} else if (actor.src === 'scene') {
+		actor.subscribe(async (snapshot) => {
+			const result = await prisma.scene.upsert({
+				where: {
+					sceneNumber: snapshot.context.sceneNumber,
+				},
+				update: {
+					...snapshot.context,
+					sceneStatus: JSON.stringify(snapshot.value),
+				},
+				create: {
+					...snapshot.context,
+					sceneStatus: JSON.stringify(snapshot.value),
+				},
+			});
+			console.log(result);
+		});
 	}
 };
 

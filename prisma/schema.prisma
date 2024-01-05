@@ -19,3 +19,28 @@ model Resource {
   resourceLineIndex String?
   sceneNumber       Int?
 }
+
+model Scene {
+  id               String         @id @default(auto()) @map("_id") @db.ObjectId
+  address          Address
+  alarmKeyword     String
+  sceneNumber      Int            @unique
+  initialResources String[]
+  resourceLines    ResourceLine[]
+  sceneStatus      String
+}
+
+type Address {
+  street   String
+  object   String?
+  district String?
+}
+
+type ResourceLine {
+  index             Int
+  type              String
+  disposedType      String?
+  callsign          String?
+  status            String
+  cancelledCallsign String?
+}
