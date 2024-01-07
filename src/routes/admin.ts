@@ -27,4 +27,9 @@ router.get('/get-sessions', async (req: Request, res: Response) => {
 	res.send(dbList);
 });
 
+router.get('/get-actual-session', async (req: Request, res: Response) => {
+	const actualSession = process.env.SESSION_NAME;
+	res.send(actualSession);
+});
+
 export default router;
